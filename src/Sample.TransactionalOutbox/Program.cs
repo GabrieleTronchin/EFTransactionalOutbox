@@ -1,6 +1,7 @@
 using Quartz;
 using Sample.TransactionalOutbox.Domain;
 using Sample.TransactionalOutbox.Domain.Order;
+using Sample.TransactionalOutbox.Domain.Product;
 using Sample.TransactionalOutbox.Job;
 using Sample.TransactionalOutbox.Persistence;
 
@@ -33,7 +34,15 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/GetOrder", async (IOrderRepository orderRepository) =>
+
+app.MapGet("/Products", async (IProductRepository productRepository) =>
+{
+    return await productRepository.GetAsync(CancellationToken.None);
+})
+.WithName("GetProducts")
+.WithOpenApi();
+
+app.MapGet("/Orders", async (IOrderRepository orderRepository) =>
 {
     return await orderRepository.GetAsync(CancellationToken.None);
 })

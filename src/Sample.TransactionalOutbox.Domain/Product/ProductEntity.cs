@@ -17,7 +17,7 @@ public class ProductEntity
         };
     }
 
-    public void HasBeenPurchased()
+    public void HasBeenConfirmed()
     {
         if (Quantity == 0) throw new InvalidOperationException("product not available");
         Quantity--;

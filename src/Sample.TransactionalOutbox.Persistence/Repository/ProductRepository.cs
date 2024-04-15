@@ -12,6 +12,12 @@ internal class ProductRepository : IProductRepository
         _context = context;
     }
 
+
+    public async Task<IEnumerable<ProductEntity>> GetAsync(CancellationToken cancel)
+    {
+        return await _context.Products.ToListAsync(cancel);
+    }
+
     public async Task<ProductEntity> GetAsync(Guid id, CancellationToken cancel)
     {
         return await _context.Products
@@ -28,4 +34,5 @@ internal class ProductRepository : IProductRepository
     {
         await _context.AddAsync(entity);
     }
+
 }

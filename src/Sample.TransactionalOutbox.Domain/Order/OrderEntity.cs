@@ -26,7 +26,7 @@ public class OrderEntity : DomainEventManager
 
     public void ConfirmPayment()
     {
-        if (Confirmed) throw new InvalidOperationException("It's already paid.");
+        if (Confirmed) throw new InvalidOperationException("It's already confirmed.");
 
         RaiseEvent(new OrderConfirmed(ProductId));
 

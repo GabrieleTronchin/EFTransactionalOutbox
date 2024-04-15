@@ -5,4 +5,6 @@ namespace Sample.TransactionalOutbox.Domain.Product;
 public interface IProductRepository : IRepository<ProductEntity>
 {
     Task<ProductEntity> GetAsync(Guid id, CancellationToken cancel);
+
+    Task<IEnumerable<ProductEntity>> GetAsync(CancellationToken cancel);
 }

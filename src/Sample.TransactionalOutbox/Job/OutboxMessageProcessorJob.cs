@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Quartz;
+using Sample.TransactionalOutbox.Domain.Order.DomainEvents;
 using Sample.TransactionalOutbox.Domain.Primitives;
 using Sample.TransactionalOutbox.Persistence;
 
@@ -32,6 +33,8 @@ public class OutboxMessageProcessorJob : IJob
 
 
         if (!messages.Any()) return;
+
+        _logger.LogDebug($"Some new messages event are found. Event number: {messages.Count}");
 
         foreach (var message in messages)
         {

@@ -29,7 +29,18 @@ To effectively test the project, follow these steps:
 
 # Transactional Outbox Pattern
 
-//TODO
+In a microservices architecture, various services are typically responsible for distinct aspects of business logic. 
+However, when an operation necessitates the involvement of multiple services, maintaining data consistency becomes a significant challenge. 
+
+For instance, consider an Order Management System where the process of placing an order entails not only updating inventory but also several other operations. 
+Failure at any of these stages can result in inconsistencies across the services.
+
+In this article, we will delve into the Transactional Outbox pattern within the context of Order Management and provide a simplified example. 
+
+To simplify the explanation, I have utilized SQL Server to persist our events, Quartz for event consumption, and Mediator as a message broker. 
+It's worth noting that different databases can be employed to persist events, and a service bus can be utilized to dispatch them, offering flexibility in implementation.
+
+More info about  Transactional Outbox Pattern [here](https://microservices.io/patterns/data/transactional-outbox.html)
 
 # Technical Description
 

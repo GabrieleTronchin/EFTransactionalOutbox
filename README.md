@@ -10,15 +10,22 @@ We have two main entities:
 These entities are automatically initialized within the database.
 
 Within the API, there are three crucial endpoints:
+
+![Swagger](assets/SwaggerHome.png)
+
 1. **Products**: This endpoint returns a list of products along with their respective quantities.
 2. **Orders**: Here, you can retrieve a list of created orders.
-3. **OrderConfirmations**: This is a POST endpoint designed to confirm a created order.
+3. **PurchaseOrder**: This is a POST endpoint designed to confirm a created order.
 
 To effectively test the project, follow these steps:
 1. **Retrieve a Product**: Note that the default order quantity is set to 10.
+    ![GetProduct](assets/GetProduct01.png)
 2. **Fetch Orders**: This step allows you to obtain an order ID.
-3. **Confirm an Order**: Utilize the OrderConfirmations endpoint with a valid order ID.
+   ![GetOrder](assets/GetOrder01.png)
+3. **Purchase Order**: Utilize the PurchaseOrder endpoint with a valid order ID.
+   ![Purchase Order](assets/PurchaseOrder.png)
 4. **Check Product Quantity**: Finally, re-access the product to observe the decremented order quantity.
+    ![Swagger](assets/GetProduct02.png)
 
 # Transactional Outbox Pattern
 

@@ -26,21 +26,131 @@ To effectively test the project, follow these steps:
 
 # Technical Description
 
-Lets look a bit bejnd the hood.
+Let's take a peek under the hood of our system.
 
-The key concept are:
+In the persistence layer, we've set up a table dedicated to storing domain message events.
 
+I've introduced an abstract class named "DomainEventManager," responsible for managing a list of events.
+This class can be inherited from a domain class and use it to enqueued events. 
+
+When the "SaveChanges" method is invoked, an Entity Framework interceptor takes charge of persisting all domain events into our designated table.
+
+Additionally, a timer job is activated every few seconds. Its duty is to peruse the event table and dispatch the events stored within.
+
+## Domain Events Manager
+
+Our manager is tasked with handling events.
+Let's delve into the code:
+
+```C#
+public abstract class DomainEventManager
+{
+    private readonly IList<IDomainEvent> _events;
+
+    protected DomainEventManager()
+    {
+        _events = new List<IDomainEvent>();
+    }
+
+    public void RaiseEvent(IDomainEvent domainEvent)
+    {
+        _events.Add(domainEvent);
+    }
+
+    public IEnumerable<IDomainEvent> GetEvents()
+    {
+        return _events.ToList();
+    }
+
+    public void ClearEvents()
+    {
+        _events.Clear();
+    }
+}
+```
+
+We can inherit DomainEventManager class into other domain classes. 
+This allows us to seamlessly integrate event handling within our domain logic.
+
+```C#
+public class OrderEntity : DomainEventManager
+{
+    
+    // Code omitted for brevity
+
+    public void ConfirmPayment()
+    {
+        if (Confirmed) throw new InvalidOperationException("It's already confirmed.");
+
+        RaiseEvent(new OrderConfirmed(ProductId));
+
+        Confirmed = true;
+    }
+
+    // Code omitted for brevity
+
+}
+```
+
+
+## Entity Framework Save DomainEvents
+
+To automatically persist events, a custom SaveChange method is necessary.
+For this purpose, we've implemented the "SaveChangesInterceptor" class. 
+ 
+Here more information about EntityFramework [Interceptors](https://learn.microsoft.com/en-us/ef/core/logging-events-diagnostics/interceptors)
+
+ Here's a snippet of the interceptor code:
+
+```C#
+public sealed class OrderDomainEventInterceptor
+: SaveChangesInterceptor
+{
+    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+    {
+        var dbContext = eventData.Context;
+
+        if (dbContext is null)
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+
+        var domainEvents = dbContext.ChangeTracker.Entries<OrderEntity>()
+             .Select(x => x.Entity)
+             .SelectMany(x =>
+             {
+                 var @event = x.GetEvents();
+
+                 x.ClearEvents();
+
+                 return @event;
+
+             })
+             .Select(x => new OutboxMessageEntity()
+             {
+                 Id = Guid.NewGuid(),
+                 CreationTime = DateTime.UtcNow,
+                 Type = x.GetType().Name,
+                 Content = JsonConvert.SerializeObject(x, new JsonSerializerSettings
+                 {
+                     TypeNameHandling = TypeNameHandling.All
+                 })
+             })
+             .ToList();
+
+        dbContext.Set<OutboxMessageEntity>().AddRange(domainEvents);
+        return base.SavingChangesAsync(eventData, result, cancellationToken);
+    }
+}
+```
 
 
 ## Outbox Processor Job
 
-It's a timer job that every few second consult the DomainEvents table and dispatch the event.
-The timer job is implmented using Quartz .net here the link for more information: [quazlink]
+The outbox processor job is a crucial component that ensures timely dispatch of events stored in the DomainEvents table. It operates using Quartz .NET. For further details, refer to this [link](https://www.quartz-scheduler.net/)
 
-In this example we use mediatR nuget to manage events, but in case you can use your favorite service bus client.
+In our implementation, we leverage the MediatR NuGet package for event management. However, feel free to integrate your preferred service bus client.
 
-here the code of the outboxmessage pattern:
-
+Here's an overview of the outbox message pattern:
+```C#
 public class OutboxMessageProcessorJob : IJob
 {
     private const int DEFAULT_TAKE_DOMAINS = 10;
@@ -103,3 +213,6 @@ public class OutboxMessageProcessorJob : IJob
         await _context.SaveChangesAsync(context.CancellationToken);
     }
 }
+```
+
+This comprehensive setup guarantees efficient handling and processing of domain events within our application.

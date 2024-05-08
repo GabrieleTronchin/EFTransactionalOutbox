@@ -16,9 +16,11 @@ public class OutboxMessageProcessorJob : IJob
     private readonly IPublisher _publisher;
     private readonly ILogger<OutboxMessageProcessorJob> _logger;
 
-    public OutboxMessageProcessorJob(ILogger<OutboxMessageProcessorJob> logger,
-                                     ShopDbContext context,
-                                     IPublisher publisher)
+    public OutboxMessageProcessorJob(
+        ILogger<OutboxMessageProcessorJob> logger,
+        ShopDbContext context,
+        IPublisher publisher
+    )
     {
         _context = context;
         _publisher = publisher;
@@ -27,12 +29,13 @@ public class OutboxMessageProcessorJob : IJob
 
     public async Task Execute(IJobExecutionContext context)
     {
-        var messages = await _context.DomainEvents
-                 .Where(de => de.CompleteTime == null)
-                 .Take(DEFAULT_TAKE_DOMAINS).ToListAsync(context.CancellationToken);
+        var messages = await _context
+            .DomainEvents.Where(de => de.CompleteTime == null)
+            .Take(DEFAULT_TAKE_DOMAINS)
+            .ToListAsync(context.CancellationToken);
 
-
-        if (!messages.Any()) return;
+        if (!messages.Any())
+            return;
 
         _logger.LogDebug($"Some new messages event are found. Event number: {messages.Count}");
 
@@ -40,14 +43,16 @@ public class OutboxMessageProcessorJob : IJob
         {
             try
             {
-                var domainEvent = JsonConvert.DeserializeObject<IDomainEvent>(message.Content, new JsonSerializerSettings
-                {
-                    TypeNameHandling = TypeNameHandling.Auto
-                });
+                var domainEvent = JsonConvert.DeserializeObject<IDomainEvent>(
+                    message.Content,
+                    new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto }
+                );
 
                 if (domainEvent == null)
                 {
-                    _logger.LogError($"An error occurred during deserialization. Domain Event Id:{message.Id}");
+                    _logger.LogError(
+                        $"An error occurred during deserialization. Domain Event Id:{message.Id}"
+                    );
                     continue;
                 }
 

@@ -2,7 +2,6 @@
 
 public abstract class DomainEventManager
 {
-
     private readonly IList<IDomainEvent> _events;
 
     protected DomainEventManager()
@@ -10,12 +9,10 @@ public abstract class DomainEventManager
         _events = new List<IDomainEvent>();
     }
 
-
     public void RaiseEvent(IDomainEvent domainEvent)
     {
         _events.Add(domainEvent);
     }
-
 
     public IEnumerable<IDomainEvent> GetEvents()
     {
@@ -26,7 +23,4 @@ public abstract class DomainEventManager
     {
         _events.Clear();
     }
-
-
-
 }

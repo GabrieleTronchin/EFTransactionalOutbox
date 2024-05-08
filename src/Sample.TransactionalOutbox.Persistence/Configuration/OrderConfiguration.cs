@@ -11,4 +11,3 @@ internal class OrderConfiguration : IEntityTypeConfiguration<OrderEntity>
         builder.HasKey(t => t.Id);
     }
 }
-

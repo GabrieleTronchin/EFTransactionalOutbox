@@ -16,18 +16,20 @@ namespace Sample.TransactionalOutbox.Persistence
             services.AddTransient<IOrderRepository, OrderRepository>();
             services.AddSingleton<OrderDomainEventInterceptor>();
 
-            var tcInterceptor = services.BuildServiceProvider().GetRequiredService<OrderDomainEventInterceptor>();
+            var tcInterceptor = services
+                .BuildServiceProvider()
+                .GetRequiredService<OrderDomainEventInterceptor>();
 
             services.AddDbContext<ShopDbContext>(options =>
             {
-                options.UseInMemoryDatabase("ShopDb")
+                options
+                    .UseInMemoryDatabase("ShopDb")
                     .AddInterceptors(tcInterceptor)
                     .EnableSensitiveDataLogging()
                     .ConfigureWarnings(b => b.Ignore(InMemoryEventId.TransactionIgnoredWarning));
             });
 
             return services;
-
         }
     }
 }

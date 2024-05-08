@@ -11,4 +11,3 @@ internal class ProductConfiguration : IEntityTypeConfiguration<ProductEntity>
         builder.HasKey(t => t.Id);
     }
 }
-

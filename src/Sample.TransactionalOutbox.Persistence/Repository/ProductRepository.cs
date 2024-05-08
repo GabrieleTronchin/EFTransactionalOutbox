@@ -12,7 +12,6 @@ internal class ProductRepository : IProductRepository
         _context = context;
     }
 
-
     public async Task<IEnumerable<ProductEntity>> GetAsync(CancellationToken cancel)
     {
         return await _context.Products.ToListAsync(cancel);
@@ -20,9 +19,10 @@ internal class ProductRepository : IProductRepository
 
     public async Task<ProductEntity> GetAsync(Guid id, CancellationToken cancel)
     {
-        return await _context.Products
-            .SingleOrDefaultAsync(x => x.Id == id, cancel) ??
-             throw new InvalidOperationException($"System could not find any {nameof(ProductEntity.Id)} with value {id}");
+        return await _context.Products.SingleOrDefaultAsync(x => x.Id == id, cancel)
+            ?? throw new InvalidOperationException(
+                $"System could not find any {nameof(ProductEntity.Id)} with value {id}"
+            );
     }
 
     public async Task SaveChangesAsync()
@@ -34,5 +34,4 @@ internal class ProductRepository : IProductRepository
     {
         await _context.AddAsync(entity);
     }
-
 }

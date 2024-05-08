@@ -9,7 +9,10 @@ internal sealed class OrderConfirmedEventHandler : INotificationHandler<OrderCon
     private readonly IProductRepository _productRepository;
     private readonly ILogger<OrderConfirmedEventHandler> _logger;
 
-    public OrderConfirmedEventHandler(IProductRepository repository, ILogger<OrderConfirmedEventHandler>  logger)
+    public OrderConfirmedEventHandler(
+        IProductRepository repository,
+        ILogger<OrderConfirmedEventHandler> logger
+    )
     {
         _productRepository = repository;
         _logger = logger;
@@ -17,9 +20,14 @@ internal sealed class OrderConfirmedEventHandler : INotificationHandler<OrderCon
 
     public async Task Handle(OrderConfirmed orderConfirmed, CancellationToken cancellationToken)
     {
-        _logger.LogInformation($"New order confimation received ProductId = {orderConfirmed.productId}");
+        _logger.LogInformation(
+            $"New order confimation received ProductId = {orderConfirmed.productId}"
+        );
 
-        var product = await _productRepository.GetAsync(orderConfirmed.productId, cancellationToken);
+        var product = await _productRepository.GetAsync(
+            orderConfirmed.productId,
+            cancellationToken
+        );
 
         product.HasBeenConfirmed();
 

@@ -9,10 +9,15 @@ public static class SeedDb
 {
     public static void Initialize(IApplicationBuilder app)
     {
-        using var serviceScope = app.ApplicationServices.GetRequiredService<IServiceScopeFactory>().CreateScope();
+        using var serviceScope = app
+            .ApplicationServices.GetRequiredService<IServiceScopeFactory>()
+            .CreateScope();
 
-        var context = serviceScope.ServiceProvider.GetService<ShopDbContext>()
-            ?? throw new NullReferenceException($"Cannot find any service for {nameof(ShopDbContext)}");
+        var context =
+            serviceScope.ServiceProvider.GetService<ShopDbContext>()
+            ?? throw new NullReferenceException(
+                $"Cannot find any service for {nameof(ShopDbContext)}"
+            );
 
         context.Database.EnsureCreated();
 
@@ -23,6 +28,4 @@ public static class SeedDb
 
         context.SaveChanges();
     }
-
 }
-

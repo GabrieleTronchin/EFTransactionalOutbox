@@ -5,13 +5,12 @@ namespace Sample.TransactionalOutbox.Domain.Order;
 
 public class OrderEntity : DomainEventManager
 {
-    private OrderEntity()
-    {
-    }
+    private OrderEntity() { }
 
     public static OrderEntity Create(Guid productId, string description)
     {
-        if (string.IsNullOrWhiteSpace(description)) throw new ArgumentException($"Invalid {nameof(description)}");
+        if (string.IsNullOrWhiteSpace(description))
+            throw new ArgumentException($"Invalid {nameof(description)}");
 
         var order = new OrderEntity
         {
@@ -26,7 +25,8 @@ public class OrderEntity : DomainEventManager
 
     public void ConfirmPayment()
     {
-        if (Confirmed) throw new InvalidOperationException("It's already confirmed.");
+        if (Confirmed)
+            throw new InvalidOperationException("It's already confirmed.");
 
         RaiseEvent(new OrderConfirmed(ProductId));
 

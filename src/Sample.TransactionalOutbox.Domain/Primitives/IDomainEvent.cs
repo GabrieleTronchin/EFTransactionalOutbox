@@ -2,7 +2,4 @@
 
 namespace Sample.TransactionalOutbox.Domain.Primitives;
 
-public interface IDomainEvent : INotification
-{
-
-}
+public interface IDomainEvent : INotification { }

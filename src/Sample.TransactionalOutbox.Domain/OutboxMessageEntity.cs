@@ -13,6 +13,5 @@
         public DateTime? CompleteTime { get; set; }
 
         public string? Exception { get; set; }
-
     }
 }

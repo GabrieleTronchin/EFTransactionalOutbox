@@ -19,8 +19,10 @@ internal class OrderRepository : IOrderRepository
 
     public async Task<OrderEntity> GetAsync(Guid id, CancellationToken cancel)
     {
-        return await _context.Orders.SingleOrDefaultAsync(x => x.Id == id, cancel) ??
-         throw new InvalidOperationException($"System could not find any {nameof(OrderEntity.Id)} with value {id}");
+        return await _context.Orders.SingleOrDefaultAsync(x => x.Id == id, cancel)
+            ?? throw new InvalidOperationException(
+                $"System could not find any {nameof(OrderEntity.Id)} with value {id}"
+            );
     }
 
     public async Task<IEnumerable<OrderEntity>> GetAsync(CancellationToken cancel)

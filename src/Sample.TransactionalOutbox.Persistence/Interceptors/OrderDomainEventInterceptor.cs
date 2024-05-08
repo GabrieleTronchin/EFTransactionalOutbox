@@ -5,38 +5,41 @@ using Sample.TransactionalOutbox.Domain.Order;
 
 namespace Sample.TransactionalOutbox.Persistence.Interceptors;
 
-public sealed class OrderDomainEventInterceptor
-: SaveChangesInterceptor
+public sealed class OrderDomainEventInterceptor : SaveChangesInterceptor
 {
-    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData,
+        InterceptionResult<int> result,
+        CancellationToken cancellationToken = default
+    )
     {
         var dbContext = eventData.Context;
 
         if (dbContext is null)
             return base.SavingChangesAsync(eventData, result, cancellationToken);
 
-        var domainEvents = dbContext.ChangeTracker.Entries<OrderEntity>()
-             .Select(x => x.Entity)
-             .SelectMany(x =>
-             {
-                 var @event = x.GetEvents();
+        var domainEvents = dbContext
+            .ChangeTracker.Entries<OrderEntity>()
+            .Select(x => x.Entity)
+            .SelectMany(x =>
+            {
+                var @event = x.GetEvents();
 
-                 x.ClearEvents();
+                x.ClearEvents();
 
-                 return @event;
-
-             })
-             .Select(x => new OutboxMessageEntity()
-             {
-                 Id = Guid.NewGuid(),
-                 CreationTime = DateTime.UtcNow,
-                 Type = x.GetType().Name,
-                 Content = JsonConvert.SerializeObject(x, new JsonSerializerSettings
-                 {
-                     TypeNameHandling = TypeNameHandling.All
-                 })
-             })
-             .ToList();
+                return @event;
+            })
+            .Select(x => new OutboxMessageEntity()
+            {
+                Id = Guid.NewGuid(),
+                CreationTime = DateTime.UtcNow,
+                Type = x.GetType().Name,
+                Content = JsonConvert.SerializeObject(
+                    x,
+                    new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All }
+                )
+            })
+            .ToList();
 
         dbContext.Set<OutboxMessageEntity>().AddRange(domainEvents);
         return base.SavingChangesAsync(eventData, result, cancellationToken);

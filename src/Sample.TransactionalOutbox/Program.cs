@@ -8,6 +8,7 @@ using Sample.TransactionalOutbox.Persistence;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
 builder.Services.AddPersistence();
 
 builder.Services.AddMediatR(cfg =>
@@ -34,7 +35,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
 
 app.MapGet(
         "/Products",
@@ -67,6 +67,8 @@ app.MapPost(
     )
     .WithName("Order")
     .WithOpenApi();
+
+app.UseHttpsRedirection();
 
 SeedDb.Initialize(app);
 

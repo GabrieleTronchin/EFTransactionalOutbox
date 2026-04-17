@@ -6,29 +6,29 @@ This plan modernizes the Sample.TransactionalOutbox solution by first establishi
 
 ## Tasks
 
-- [ ] 1. Create test project infrastructure and FsCheck generators
-  - [ ] 1.1 Create the Domain test project and add to solution
+- [x] 1. Create test project infrastructure and FsCheck generators
+  - [x] 1.1 Create the Domain test project and add to solution
     - Create `test/Sample.TransactionalOutbox.Domain.Tests/Sample.TransactionalOutbox.Domain.Tests.csproj` targeting `net9.0`
     - Add NuGet packages: `xunit` (2.9.3), `xunit.runner.visualstudio` (2.8.2), `Microsoft.NET.Test.Sdk` (17.12.0), `FsCheck.Xunit` (3.1.0), `FluentAssertions` (7.0.0)
     - Add project reference to `Sample.TransactionalOutbox.Domain`
     - Add the test project to `src/Sample.TransactionalOutbox.sln` via `dotnet sln add`
     - _Requirements: 1.1, 1.2, 1.3_
 
-  - [ ] 1.2 Create the Persistence test project and add to solution
+  - [x] 1.2 Create the Persistence test project and add to solution
     - Create `test/Sample.TransactionalOutbox.Persistence.Tests/Sample.TransactionalOutbox.Persistence.Tests.csproj` targeting `net9.0`
     - Add NuGet packages: `xunit` (2.9.3), `xunit.runner.visualstudio` (2.8.2), `Microsoft.NET.Test.Sdk` (17.12.0), `FsCheck.Xunit` (3.1.0), `FluentAssertions` (7.0.0), `Microsoft.EntityFrameworkCore.InMemory` (9.0.2)
     - Add project references to `Sample.TransactionalOutbox.Persistence` and `Sample.TransactionalOutbox.Domain`
     - Add the test project to `src/Sample.TransactionalOutbox.sln` via `dotnet sln add`
     - _Requirements: 1.1, 1.2, 1.3_
 
-  - [ ] 1.3 Create the API test project and add to solution
+  - [x] 1.3 Create the API test project and add to solution
     - Create `test/Sample.TransactionalOutbox.Tests/Sample.TransactionalOutbox.Tests.csproj` targeting `net9.0`
     - Add NuGet packages: `xunit` (2.9.3), `xunit.runner.visualstudio` (2.8.2), `Microsoft.NET.Test.Sdk` (17.12.0), `FsCheck.Xunit` (3.1.0), `FluentAssertions` (7.0.0), `NSubstitute` (5.3.0), `Microsoft.EntityFrameworkCore.InMemory` (9.0.2)
     - Add project references to `Sample.TransactionalOutbox`, `Sample.TransactionalOutbox.Domain`, and `Sample.TransactionalOutbox.Persistence`
     - Add the test project to `src/Sample.TransactionalOutbox.sln` via `dotnet sln add`
     - _Requirements: 1.1, 1.2, 1.3_
 
-  - [ ] 1.4 Create FsCheck Arbitrary generators for domain types
+  - [x] 1.4 Create FsCheck Arbitrary generators for domain types
     - Create `test/Sample.TransactionalOutbox.Domain.Tests/Generators/DomainGenerators.cs`
     - Implement `ArbitraryDescription()` — generates valid non-empty, non-whitespace strings
     - Implement `ArbitraryQuantity()` — generates valid positive integers
@@ -37,8 +37,8 @@ This plan modernizes the Sample.TransactionalOutbox solution by first establishi
     - Follow project code style: file-scoped namespace, `_` prefix fields, sealed class
     - _Requirements: 2.1, 3.1, 4.1_
 
-- [ ] 2. Implement DomainEventManager tests
-  - [ ] 2.1 Write unit tests for DomainEventManager
+- [x] 2. Implement DomainEventManager tests
+  - [x] 2.1 Write unit tests for DomainEventManager
     - Create `test/Sample.TransactionalOutbox.Domain.Tests/DomainEventManagerTests.cs`
     - Since `DomainEventManager` is abstract, create a private concrete subclass in the test file for testing
     - Test `RaiseEvent` adds event to list (`[Fact]`)
@@ -48,20 +48,20 @@ This plan modernizes the Sample.TransactionalOutbox solution by first establishi
     - Follow test naming convention: `MethodName_Scenario_ExpectedResult`
     - _Requirements: 2.1, 2.2, 2.3, 2.5_
 
-  - [ ]* 2.2 Write property test for RaiseEvent/GetEvents round-trip
+  - [x] 2.2 Write property test for RaiseEvent/GetEvents round-trip
     - **Property 1: RaiseEvent/GetEvents round-trip preserves all events**
     - For any list of domain events, raising each and calling GetEvents returns exactly those events in order with matching count
     - Use `[Property(MaxTest = 100)]` attribute from FsCheck.Xunit
     - **Validates: Requirements 2.1, 2.2, 2.4**
 
-  - [ ]* 2.3 Write property test for ClearEvents
+  - [x] 2.3 Write property test for ClearEvents
     - **Property 2: ClearEvents empties the event list**
     - For any DomainEventManager with any number of raised events, ClearEvents followed by GetEvents returns empty collection
     - Use `[Property(MaxTest = 100)]` attribute from FsCheck.Xunit
     - **Validates: Requirements 2.3, 2.5**
 
-- [ ] 3. Implement OrderEntity tests
-  - [ ] 3.1 Write unit tests for OrderEntity
+- [x] 3. Implement OrderEntity tests
+  - [x] 3.1 Write unit tests for OrderEntity
     - Create `test/Sample.TransactionalOutbox.Domain.Tests/OrderEntityTests.cs`
     - Test `Create_WithValidInputs_ReturnsUnconfirmedOrder` — verifies Confirmed is false, ProductId and Description match (`[Fact]`)
     - Test `Create_WithNullDescription_ThrowsArgumentException` (`[Fact]`)
@@ -72,32 +72,32 @@ This plan modernizes the Sample.TransactionalOutbox solution by first establishi
     - Test `ConfirmPayment_OnConfirmedOrder_ThrowsInvalidOperationException` (`[Fact]`)
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-  - [ ]* 3.2 Write property test for OrderEntity.Create invariant
+  - [x] 3.2 Write property test for OrderEntity.Create invariant
     - **Property 3: OrderEntity.Create invariant — new orders are unconfirmed**
     - For any valid productId and non-empty description, Create produces instance with Confirmed=false, matching ProductId and Description
     - Use `[Property(MaxTest = 100)]` attribute from FsCheck.Xunit
     - **Validates: Requirements 3.1**
 
-  - [ ]* 3.3 Write property test for OrderEntity.Create rejects invalid descriptions
+  - [x] 3.3 Write property test for OrderEntity.Create rejects invalid descriptions
     - **Property 4: OrderEntity.Create rejects invalid descriptions**
     - For any null, empty, or whitespace-only string, Create throws ArgumentException
     - Use `[Property(MaxTest = 100)]` attribute from FsCheck.Xunit
     - **Validates: Requirements 3.2**
 
-  - [ ]* 3.4 Write property test for ConfirmPayment sets Confirmed and raises event
+  - [x] 3.4 Write property test for ConfirmPayment sets Confirmed and raises event
     - **Property 5: ConfirmPayment sets Confirmed and raises correct event**
     - For any unconfirmed OrderEntity, ConfirmPayment sets Confirmed=true and adds exactly one OrderConfirmed event with matching ProductId
     - Use `[Property(MaxTest = 100)]` attribute from FsCheck.Xunit
     - **Validates: Requirements 3.3, 3.4**
 
-  - [ ]* 3.5 Write property test for double ConfirmPayment throws
+  - [x] 3.5 Write property test for double ConfirmPayment throws
     - **Property 6: Double ConfirmPayment throws**
     - For any already-confirmed OrderEntity, calling ConfirmPayment again throws InvalidOperationException
     - Use `[Property(MaxTest = 100)]` attribute from FsCheck.Xunit
     - **Validates: Requirements 3.5**
 
-- [ ] 4. Implement ProductEntity tests
-  - [ ] 4.1 Write unit tests for ProductEntity
+- [x] 4. Implement ProductEntity tests
+  - [x] 4.1 Write unit tests for ProductEntity
     - Create `test/Sample.TransactionalOutbox.Domain.Tests/ProductEntityTests.cs`
     - Test `Create_WithPositiveQuantity_ReturnsProductWithCorrectQuantity` (`[Fact]`)
     - Test `Create_WithZeroQuantity_ThrowsException` (`[Fact]`)
@@ -106,26 +106,26 @@ This plan modernizes the Sample.TransactionalOutbox solution by first establishi
     - Test `HasBeenConfirmed_WithZeroQuantity_ThrowsInvalidOperationException` (`[Fact]`)
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-  - [ ]* 4.2 Write property test for ProductEntity.Create preserves quantity
+  - [x] 4.2 Write property test for ProductEntity.Create preserves quantity
     - **Property 7: ProductEntity.Create preserves quantity**
     - For any positive integer, Create produces instance where Quantity equals the input
     - Use `[Property(MaxTest = 100)]` attribute from FsCheck.Xunit
     - **Validates: Requirements 4.1**
 
-  - [ ]* 4.3 Write property test for ProductEntity.Create rejects non-positive quantities
+  - [x] 4.3 Write property test for ProductEntity.Create rejects non-positive quantities
     - **Property 8: ProductEntity.Create rejects non-positive quantities**
     - For any integer ≤ 0, Create throws an exception
     - Use `[Property(MaxTest = 100)]` attribute from FsCheck.Xunit
     - **Validates: Requirements 4.2**
 
-  - [ ]* 4.4 Write property test for HasBeenConfirmed decrement invariance
+  - [x] 4.4 Write property test for HasBeenConfirmed decrement invariance
     - **Property 9: HasBeenConfirmed decrement invariance**
     - For any product with initial quantity Q > 0 and N calls (1 ≤ N ≤ Q), Quantity equals Q − N
     - Use `[Property(MaxTest = 100)]` attribute from FsCheck.Xunit
     - **Validates: Requirements 4.3, 4.5**
 
-- [ ] 5. Implement OrderDomainEventInterceptor tests
-  - [ ] 5.1 Write unit tests for OrderDomainEventInterceptor
+- [x] 5. Implement OrderDomainEventInterceptor tests
+  - [x] 5.1 Write unit tests for OrderDomainEventInterceptor
     - Create `test/Sample.TransactionalOutbox.Persistence.Tests/OrderDomainEventInterceptorTests.cs`
     - Set up InMemory `ShopDbContext` with `OrderDomainEventInterceptor` registered
     - Test `SavingChangesAsync_WithOrderEvents_CreatesOutboxMessages` — verify N events produce N OutboxMessageEntity records (`[Fact]`)
@@ -135,20 +135,20 @@ This plan modernizes the Sample.TransactionalOutbox solution by first establishi
     - Test `SavingChangesAsync_WithNoEvents_DoesNotCreateOutboxMessages` (`[Fact]`)
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-  - [ ]* 5.2 Write property test for interceptor creates correct outbox messages
+  - [x] 5.2 Write property test for interceptor creates correct outbox messages
     - **Property 10: Interceptor creates correct outbox messages**
     - For any OrderEntity with N domain events (N ≥ 1), SaveChangesAsync produces exactly N OutboxMessageEntity records with correct Type and round-trippable Content
     - Use `[Property(MaxTest = 100)]` attribute from FsCheck.Xunit
     - **Validates: Requirements 5.1, 5.2, 5.3**
 
-  - [ ]* 5.3 Write property test for interceptor clears events after persistence
+  - [x] 5.3 Write property test for interceptor clears events after persistence
     - **Property 11: Interceptor clears events after persistence**
     - For any OrderEntity with domain events, after SaveChangesAsync, GetEvents() returns empty collection
     - Use `[Property(MaxTest = 100)]` attribute from FsCheck.Xunit
     - **Validates: Requirements 5.4**
 
-- [ ] 6. Implement OutboxMessageProcessorJob tests
-  - [ ] 6.1 Write unit tests for OutboxMessageProcessorJob
+- [x] 6. Implement OutboxMessageProcessorJob tests
+  - [x] 6.1 Write unit tests for OutboxMessageProcessorJob
     - Create `test/Sample.TransactionalOutbox.Tests/OutboxMessageProcessorJobTests.cs`
     - Set up InMemory `ShopDbContext`, mock `IPublisher` and `ILogger<OutboxMessageProcessorJob>` via NSubstitute
     - Create a mock/stub `IJobExecutionContext` via NSubstitute
@@ -159,20 +159,20 @@ This plan modernizes the Sample.TransactionalOutbox solution by first establishi
     - Test `Execute_WithNoUnprocessedMessages_DoesNotPublish` — verify IPublisher.Publish not called (`[Fact]`)
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-  - [ ]* 6.2 Write property test for successful message processing round-trip
+  - [x] 6.2 Write property test for successful message processing round-trip
     - **Property 12: Successful message processing round-trip**
     - For any set of valid unprocessed OutboxMessageEntity records, Execute deserializes and publishes each, then removes all successful messages
     - Use `[Property(MaxTest = 100)]` attribute from FsCheck.Xunit
     - **Validates: Requirements 6.1, 6.2**
 
-- [ ] 7. Checkpoint — Verify all tests green before upgrades
+- [x] 7. Checkpoint — Verify all tests green before upgrades
   - Ensure all tests pass by running `dotnet test src/Sample.TransactionalOutbox.sln`
   - All unit and property tests must be green before proceeding with any framework or package upgrades
   - Ask the user if questions arise.
   - _Requirements: 1.4_
 
-- [ ] 8. Upgrade NuGet packages
-  - [ ] 8.1 Upgrade NuGet packages across all projects
+- [x] 8. Upgrade NuGet packages
+  - [x] 8.1 Upgrade NuGet packages across all projects
     - Upgrade `MediatR` from 12.4.1 to 14.1.0 in Domain `.csproj`
     - Upgrade `Quartz` and `Quartz.Extensions.Hosting` to latest stable 3.x in API `.csproj`
     - Upgrade `Newtonsoft.Json` to latest stable 13.x in Persistence `.csproj`
@@ -183,8 +183,8 @@ This plan modernizes the Sample.TransactionalOutbox solution by first establishi
     - Run `dotnet build src/Sample.TransactionalOutbox.sln` and `dotnet test src/Sample.TransactionalOutbox.sln` to verify
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 9. Replace Swashbuckle with Scalar
-  - [ ] 9.1 Replace Swashbuckle with Scalar.AspNetCore in the API project
+- [x] 9. Replace Swashbuckle with Scalar
+  - [x] 9.1 Replace Swashbuckle with Scalar.AspNetCore in the API project
     - Remove `Swashbuckle.AspNetCore` package from `Sample.TransactionalOutbox.csproj`
     - Add `Scalar.AspNetCore` (latest stable) to `Sample.TransactionalOutbox.csproj`
     - Update `Program.cs`: remove `builder.Services.AddSwaggerGen()`, add `builder.Services.AddOpenApi()`
@@ -192,13 +192,13 @@ This plan modernizes the Sample.TransactionalOutbox solution by first establishi
     - Run `dotnet build src/Sample.TransactionalOutbox.sln` and `dotnet test src/Sample.TransactionalOutbox.sln` to verify
     - _Requirements: 11.1, 11.2_
 
-- [ ] 10. Remove deprecated packages and post-migration verification
-  - [ ] 10.1 Remove deprecated Microsoft.AspNetCore.Http.Abstractions
+- [x] 10. Remove deprecated packages and post-migration verification
+  - [x] 10.1 Remove deprecated Microsoft.AspNetCore.Http.Abstractions
     - Remove `Microsoft.AspNetCore.Http.Abstractions` (v2.3.0) from `Sample.TransactionalOutbox.Persistence.csproj`
     - Verify the project still compiles — the types are in the ASP.NET Core shared framework
     - _Requirements: 9.4_
 
-  - [ ] 10.2 Run post-migration verification checks
+  - [x] 10.2 Run post-migration verification checks
     - Run `dotnet build src/Sample.TransactionalOutbox.sln` and analyze output for warnings
     - Resolve any build warnings (deprecation, obsolete APIs, nullable reference types)
     - Run `dotnet list src/Sample.TransactionalOutbox.sln package --deprecated` and address any findings
@@ -206,19 +206,19 @@ This plan modernizes the Sample.TransactionalOutbox solution by first establishi
     - Run `dotnet test src/Sample.TransactionalOutbox.sln` to confirm all tests still pass
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7_
 
-- [ ] 11. Checkpoint — Verify clean build and all tests green post-migration
+- [x] 11. Checkpoint — Verify clean build and all tests green post-migration
   - Ensure `dotnet build` produces zero warnings and `dotnet test` passes all tests
   - Ask the user if questions arise.
   - _Requirements: 9.7_
 
-- [ ] 12. Rewrite documentation
-  - [ ] 12.1 Create docs/ folder with component deep-dive markdown files
+- [x] 12. Rewrite documentation
+  - [x] 12.1 Create docs/ folder with component deep-dive markdown files
     - Create `docs/domain-event-manager.md` — detailed explanation of DomainEventManager (RaiseEvent, GetEvents, ClearEvents), link back to README
     - Create `docs/outbox-interceptor.md` — detailed explanation of OrderDomainEventInterceptor (SaveChanges interception, serialization), link back to README
     - Create `docs/outbox-processor-job.md` — detailed explanation of OutboxMessageProcessorJob (polling, deserialization, publishing, error handling), link back to README
     - _Requirements: 10.5.8, 10.5.9_
 
-  - [ ] 12.2 Rewrite README.md
+  - [x] 12.2 Rewrite README.md
     - Repository title with short introductory paragraph
     - Table of Contents with anchor links
     - Project Structure table (Project, Description columns) covering all solution projects including test projects
@@ -233,12 +233,12 @@ This plan modernizes the Sample.TransactionalOutbox solution by first establishi
     - Do NOT include screenshots or reference the `assets/` folder
     - _Requirements: 10.1.1, 10.1.2, 10.1.3, 10.2.4, 10.3.5, 10.4.6, 10.5.7, 10.6.10, 10.6.11, 10.7.12, 10.7.13, 10.8.14, 11.3_
 
-  - [ ] 12.3 Delete the assets/ folder
+  - [x] 12.3 Delete the assets/ folder
     - Remove the `assets/` folder and all screenshot files (no longer referenced in documentation)
     - _Requirements: 10.1.3_
 
-- [ ] 13. Update the HTTP file
-  - [ ] 13.1 Rewrite Sample.TransactionalOutbox.http
+- [x] 13. Update the HTTP file
+  - [x] 13.1 Rewrite Sample.TransactionalOutbox.http
     - Add `@host` variable for base URL (`http://localhost:5220`)
     - Add `GET {{host}}/Products` with descriptive comments explaining what the call does and expected response
     - Add `GET {{host}}/Orders` with descriptive comments explaining what the call does and expected response
@@ -246,7 +246,7 @@ This plan modernizes the Sample.TransactionalOutbox solution by first establishi
     - Follow logical test flow order: Products → Orders → PurchaseOrder
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6_
 
-- [ ] 14. Final checkpoint — Ensure all tests pass and build is clean
+- [x] 14. Final checkpoint — Ensure all tests pass and build is clean
   - Run `dotnet build src/Sample.TransactionalOutbox.sln` — verify zero warnings
   - Run `dotnet test src/Sample.TransactionalOutbox.sln` — verify all tests pass
   - Ensure all tests pass, ask the user if questions arise.

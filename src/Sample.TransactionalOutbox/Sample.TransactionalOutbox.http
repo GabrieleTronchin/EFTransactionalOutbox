@@ -1,6 +1,59 @@
-@Sample.TransactionalOutbox_HostAddress = http://localhost:5220
+@host = http://localhost:5220
 
-GET {{Sample.TransactionalOutbox_HostAddress}}/weatherforecast/
+# -------------------------------------------------------
+# Step 1: Retrieve all products
+# -------------------------------------------------------
+# Lists all products with their current available quantities.
+# Use this first to see the initial product inventory before
+# confirming any orders. After an order is confirmed, the
+# Transactional Outbox pattern processes the domain event
+# and decrements the product quantity asynchronously.
+#
+# Expected response: 200 OK with a JSON array of products,
+# each containing an id, name, and quantity.
+
+GET {{host}}/Products
 Accept: application/json
 
 ###
+
+# -------------------------------------------------------
+# Step 2: Retrieve all orders
+# -------------------------------------------------------
+# Lists all orders with their current confirmation status.
+# Use this to find an unconfirmed order (Confirmed = false)
+# whose ID you can use in the PurchaseOrder endpoint below.
+# After confirming an order, call this again to verify the
+# order status has changed to Confirmed = true.
+#
+# Expected response: 200 OK with a JSON array of orders,
+# each containing an id, productId, description, and confirmed flag.
+
+GET {{host}}/Orders
+Accept: application/json
+
+###
+
+# -------------------------------------------------------
+# Step 3: Confirm an order (Transactional Outbox in action)
+# -------------------------------------------------------
+# Confirms an order by its ID, triggering the full
+# Transactional Outbox pattern flow:
+#   1. OrderEntity raises an OrderConfirmed domain event
+#   2. The EF Core SaveChanges interceptor serializes the
+#      event into the OutboxMessages table atomically
+#   3. The Quartz.NET background job picks up the message,
+#      deserializes it, and publishes it via MediatR
+#   4. The OrderConfirmedEventHandler decrements the
+#      product quantity
+#
+# Replace the example ID below with an actual order ID
+# retrieved from GET /Orders.
+#
+# Expected response: 200 OK (empty body).
+# Then call GET /Orders to verify Confirmed = true,
+# and GET /Products to see the decremented quantity
+# (may take up to 10 seconds for the background job).
+
+POST {{host}}/PurchaseOrder/e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1
+Accept: application/json

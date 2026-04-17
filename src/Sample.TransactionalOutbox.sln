@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.TransactionalOutbox.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.TransactionalOutbox.Tests", "..\test\Sample.TransactionalOutbox.Tests\Sample.TransactionalOutbox.Tests.csproj", "{31B36C01-4C50-470D-9D18-F0BCFEA6DFA6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{B7F4E132-D840-48A0-A8A5-E345E3B3A1C7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -103,5 +105,10 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {101BF054-7D23-454F-A4D5-D4070A42A0D8}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E01E4EFE-C2EC-487C-BA25-3046804BBFF6} = {B7F4E132-D840-48A0-A8A5-E345E3B3A1C7}
+		{C8B66768-D869-4A77-A68E-3BE378ADE765} = {B7F4E132-D840-48A0-A8A5-E345E3B3A1C7}
+		{31B36C01-4C50-470D-9D18-F0BCFEA6DFA6} = {B7F4E132-D840-48A0-A8A5-E345E3B3A1C7}
 	EndGlobalSection
 EndGlobal

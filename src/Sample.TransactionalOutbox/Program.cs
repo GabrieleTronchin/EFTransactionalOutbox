@@ -1,5 +1,4 @@
 using Quartz;
-using Scalar.AspNetCore;
 using Sample.TransactionalOutbox.Domain;
 using Sample.TransactionalOutbox.Domain.Order;
 using Sample.TransactionalOutbox.Domain.Product;
@@ -8,6 +7,7 @@ using Sample.TransactionalOutbox.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
+builder.Services.AddSwaggerGen();
 
 builder.Services.AddPersistence();
 
@@ -32,7 +32,8 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.MapScalarApiReference();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 

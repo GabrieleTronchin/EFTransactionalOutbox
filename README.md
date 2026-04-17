@@ -1,42 +1,55 @@
 # Transactional Outbox Pattern with EF Core
 
-A sample implementation of the **Transactional Outbox Pattern** using Entity Framework Core in .NET. This project demonstrates how to guarantee atomic persistence of domain events alongside business data changes, avoiding distributed transaction issues in microservices architectures. It uses an in-memory database, Quartz.NET for background job scheduling, and MediatR for in-process event dispatch.
+A sample .NET application demonstrating the Transactional Outbox Pattern with Entity Framework Core.
 
 ## Table of Contents
 
 - [Project Structure](#project-structure)
 - [Pattern Flow](#pattern-flow)
+- [Testing the Flow](#testing-the-flow)
 - [API Endpoints](#api-endpoints)
 - [Key Components](#key-components)
-- [Getting Started](#getting-started)
-- [Testing the Flow](#testing-the-flow)
 - [Package Versions](#package-versions)
-- [Scalar API Reference](#scalar-api-reference)
 - [Articles](#articles)
 
 ## Project Structure
 
 | Project | Description |
 |---|---|
-| `Sample.TransactionalOutbox` | API layer — ASP.NET Core Minimal API entry point, endpoint definitions, Quartz.NET job hosting, and DI configuration |
-| `Sample.TransactionalOutbox.Domain` | Domain layer — core entities (`OrderEntity`, `ProductEntity`), domain events, `DomainEventManager`, repository interfaces, and MediatR event handlers |
-| `Sample.TransactionalOutbox.Persistence` | Persistence layer — EF Core `ShopDbContext`, entity configurations, `OrderDomainEventInterceptor`, repository implementations, and database seeding |
-| `Sample.TransactionalOutbox.Domain.Tests` | Domain unit and property-based tests — xUnit + FsCheck tests for `DomainEventManager`, `OrderEntity`, and `ProductEntity` |
-| `Sample.TransactionalOutbox.Persistence.Tests` | Persistence integration tests — interceptor tests using EF Core InMemory provider |
-| `Sample.TransactionalOutbox.Tests` | API layer tests — `OutboxMessageProcessorJob` unit tests with mocked dependencies |
+| **Sample.TransactionalOutbox** | API layer with minimal endpoints and Quartz.NET background job |
+| **Sample.TransactionalOutbox.Domain** | Domain layer with `OrderEntity`, `ProductEntity`, and `DomainEventManager` |
+| **Sample.TransactionalOutbox.Persistence** | Persistence layer with EF Core `DbContext`, repositories, and outbox interceptor |
+| **Sample.TransactionalOutbox.Domain.Tests** | Unit and property-based tests for domain logic |
+| **Sample.TransactionalOutbox.Persistence.Tests** | Tests for persistence layer |
+| **Sample.TransactionalOutbox.Tests** | Integration and cross-cutting tests |
 
 ## Pattern Flow
 
+### Conceptual Overview
+
 ```mermaid
-flowchart TD
-    A[Order Confirmation\nPOST /PurchaseOrder/id] --> B[OrderEntity.ConfirmPayment\nRaises OrderConfirmed event]
-    B --> C[DomainEventManager\nStores event in memory]
-    C --> D[EF Core SaveChanges\nOrderDomainEventInterceptor]
-    D --> E[OutboxMessage Table\nEvent persisted atomically with order update]
-    E --> F[Quartz.NET Job\nOutboxMessageProcessorJob polls every 10s]
-    F --> G[MediatR Publish\nDeserializes and dispatches event]
-    G --> H[OrderConfirmedEventHandler\nDecrements product quantity]
+flowchart LR
+    A[Business Operation] --> B[Save to DB +\nWrite to Outbox]
+    B -->|Same Transaction| C[Outbox Table]
+    C --> D[Background Job\nPolls Outbox]
+    D --> E[Publish Events]
 ```
+
+### Implementation Details
+
+```mermaid
+flowchart LR
+    A[API Endpoint\nPOST /PurchaseOrder/id] --> B[OrderEntity\nRaises DomainEvent]
+    B --> C[EF Core\nSaveChangesInterceptor]
+    C -->|Same Transaction| D[OutboxMessages Table\nSerialized Events + Business Data]
+    D --> E[Quartz.NET Job\nPolls OutboxMessages]
+    E --> F[MediatR Publish\nDeserializes & Dispatches]
+    F --> G[EventHandler\nProcesses Event]
+```
+
+## Testing the Flow
+
+Use the `Sample.TransactionalOutbox.http` file or Swagger UI (`/swagger`) to explore the API endpoints and observe the outbox pattern in action.
 
 ## API Endpoints
 
@@ -46,6 +59,10 @@ flowchart TD
 | `GET` | `/Orders` | Returns a list of all orders and their confirmation status |
 | `POST` | `/PurchaseOrder/{id}` | Confirms an order by ID, triggering the outbox pattern flow |
 
+### Swagger UI
+
+Swagger UI is available at `/swagger` when running in Development mode.
+
 ## Key Components
 
 | Component | Description | Details |
@@ -54,71 +71,19 @@ flowchart TD
 | **OrderDomainEventInterceptor** | EF Core `SaveChangesInterceptor` that serializes pending domain events into the `OutboxMessage` table within the same transaction | [docs/outbox-interceptor.md](docs/outbox-interceptor.md) |
 | **OutboxMessageProcessorJob** | Quartz.NET background job that polls unprocessed outbox messages, deserializes them, and publishes via MediatR | [docs/outbox-processor-job.md](docs/outbox-processor-job.md) |
 
-## Getting Started
-
-1. **Clone the repository**
-
-   ```bash
-   git clone <repository-url>
-   cd <repository-folder>
-   ```
-
-2. **Build the solution**
-
-   ```bash
-   dotnet build src/Sample.TransactionalOutbox.sln
-   ```
-
-3. **Run the application**
-
-   ```bash
-   dotnet run --project src/Sample.TransactionalOutbox
-   ```
-
-4. **Run the tests**
-
-   ```bash
-   dotnet test src/Sample.TransactionalOutbox.sln
-   ```
-
-## Testing the Flow
-
-Follow these steps to observe the Transactional Outbox pattern in action:
-
-1. **Retrieve products** — send a `GET` request to `/Products`. Note the default product quantity (10).
-
-2. **Retrieve orders** — send a `GET` request to `/Orders`. Copy an order ID from the response.
-
-3. **Confirm an order** — send a `POST` request to `/PurchaseOrder/{id}` using the order ID from the previous step. This triggers the domain event flow.
-
-4. **Verify the result** — send another `GET` request to `/Products` and observe that the product quantity has been decremented by one. Send a `GET` request to `/Orders` to confirm the order status is now confirmed.
-
 ## Package Versions
 
 | Package | Version | Notes |
 |---|---|---|
-| .NET | 9.0 | Target framework for all projects |
+| .NET | 10.0 | Target framework for all projects |
 | MediatR | 14.1.0 | In-process messaging and domain event dispatch |
 | Quartz | 3.18.0 | Background job scheduling for outbox processing |
 | Quartz.Extensions.Hosting | 3.18.0 | Hosted service integration for Quartz.NET |
 | Newtonsoft.Json | 13.0.4 | Domain event serialization with `TypeNameHandling` |
-| Microsoft.EntityFrameworkCore.InMemory | 9.0.15 | In-memory database provider for development and testing |
-| Microsoft.AspNetCore.OpenApi | 9.0.15 | OpenAPI document generation |
+| Microsoft.EntityFrameworkCore.InMemory | 10.0.5 | In-memory database provider for development and testing |
+| Microsoft.AspNetCore.OpenApi | 10.0.5 | OpenAPI document generation |
 | Microsoft.Extensions.Logging.Abstractions | 10.0.6 | Logging abstractions for the domain layer |
-| Scalar.AspNetCore | 2.2.7 | Interactive API reference UI (replaces Swashbuckle) |
-
-## Scalar API Reference
-
-The project uses [Scalar](https://github.com/scalar/scalar) to provide an interactive API reference UI.
-
-- **URL:** [http://localhost:5220/scalar/v1](http://localhost:5220/scalar/v1)
-- **Requires:** Development environment (`ASPNETCORE_ENVIRONMENT=Development`)
-
-To launch with the Scalar UI enabled:
-
-```bash
-dotnet run --project src/Sample.TransactionalOutbox --environment Development
-```
+| Swashbuckle.AspNetCore | 10.1.7 | Swagger UI and OpenAPI documentation |
 
 ## Articles
 

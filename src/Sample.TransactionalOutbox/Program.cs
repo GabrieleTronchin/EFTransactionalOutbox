@@ -45,7 +45,8 @@ app.MapGet(
         }
     )
     .WithName("GetProducts")
-    .WithOpenApi();
+    .WithSummary("Get all products")
+    .WithDescription("Returns a list of all products with their current quantities.");
 
 app.MapGet(
         "/Orders",
@@ -55,7 +56,8 @@ app.MapGet(
         }
     )
     .WithName("GetOrder")
-    .WithOpenApi();
+    .WithSummary("Get all orders")
+    .WithDescription("Returns a list of all orders and their confirmation status.");
 
 app.MapPost(
         "/PurchaseOrder/{id}",
@@ -67,7 +69,8 @@ app.MapPost(
         }
     )
     .WithName("Order")
-    .WithOpenApi();
+    .WithSummary("Confirm an order")
+    .WithDescription("Confirms an order by ID, triggering the transactional outbox pattern flow. The order's domain event is persisted to the outbox table within the same transaction.");
 
 app.UseHttpsRedirection();
 

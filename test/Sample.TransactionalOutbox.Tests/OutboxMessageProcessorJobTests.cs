@@ -42,7 +42,7 @@ public sealed class OutboxMessageProcessorJobTests
     private static OutboxMessageEntity CreateValidOutboxMessage(Guid? productId = null)
     {
         var id = productId ?? Guid.NewGuid();
-        var domainEvent = new OrderConfirmed(id);
+        var domainEvent = new OrderConfirmed(Guid.NewGuid(), id);
         var content = JsonConvert.SerializeObject(
             domainEvent,
             new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });

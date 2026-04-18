@@ -3,7 +3,6 @@ using FsCheck;
 using FsCheck.Xunit;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using Sample.TransactionalOutbox.Domain;
 using Sample.TransactionalOutbox.Domain.Order;
 using Sample.TransactionalOutbox.Domain.Order.DomainEvents;
 using Sample.TransactionalOutbox.Persistence.Interceptors;

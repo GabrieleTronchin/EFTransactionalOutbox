@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Quartz;
-using Sample.TransactionalOutbox.Domain.Order.DomainEvents;
 using Sample.TransactionalOutbox.Domain.Primitives;
 using Sample.TransactionalOutbox.Persistence;
 

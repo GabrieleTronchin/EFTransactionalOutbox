@@ -1,7 +1,6 @@
 using FluentAssertions;
 using FsCheck.Xunit;
 using System.Text.RegularExpressions;
-using Xunit;
 
 namespace Sample.TransactionalOutbox.Tests;
 

@@ -31,8 +31,8 @@ public sealed class OrderDomainEventInterceptorTests
     {
         // Arrange
         using var context = CreateContext();
-        var order1 = OrderEntity.Create(Guid.NewGuid(), "Order One");
-        var order2 = OrderEntity.Create(Guid.NewGuid(), "Order Two");
+        var order1 = OrderEntity.Create(Guid.NewGuid(), 1, 10.00m, "Alice Smith");
+        var order2 = OrderEntity.Create(Guid.NewGuid(), 2, 25.00m, "Bob Jones");
         order1.ConfirmPayment();
         order2.ConfirmPayment();
         context.Orders.AddRange(order1, order2);
@@ -50,7 +50,7 @@ public sealed class OrderDomainEventInterceptorTests
     {
         // Arrange
         using var context = CreateContext();
-        var order = OrderEntity.Create(Guid.NewGuid(), "Test Order");
+        var order = OrderEntity.Create(Guid.NewGuid(), 1, 10.00m, "Test Customer");
         order.ConfirmPayment();
         context.Orders.Add(order);
 
@@ -68,7 +68,7 @@ public sealed class OrderDomainEventInterceptorTests
         // Arrange
         using var context = CreateContext();
         var productId = Guid.NewGuid();
-        var order = OrderEntity.Create(productId, "Test Order");
+        var order = OrderEntity.Create(productId, 1, 10.00m, "Test Customer");
         order.ConfirmPayment();
         context.Orders.Add(order);
 
@@ -84,7 +84,7 @@ public sealed class OrderDomainEventInterceptorTests
             new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.All });
 
         deserialized.Should().NotBeNull();
-        deserialized!.productId.Should().Be(productId);
+        deserialized!.ProductId.Should().Be(productId);
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public sealed class OrderDomainEventInterceptorTests
     {
         // Arrange
         using var context = CreateContext();
-        var order = OrderEntity.Create(Guid.NewGuid(), "Test Order");
+        var order = OrderEntity.Create(Guid.NewGuid(), 1, 10.00m, "Test Customer");
         order.ConfirmPayment();
         context.Orders.Add(order);
 
@@ -108,7 +108,7 @@ public sealed class OrderDomainEventInterceptorTests
     {
         // Arrange
         using var context = CreateContext();
-        var order = OrderEntity.Create(Guid.NewGuid(), "Test Order");
+        var order = OrderEntity.Create(Guid.NewGuid(), 1, 10.00m, "Test Customer");
         context.Orders.Add(order);
 
         // Act
@@ -138,7 +138,7 @@ public sealed class OrderDomainEventInterceptorTests
         var orders = Enumerable.Range(0, n)
             .Select(_ =>
             {
-                var order = OrderEntity.Create(Guid.NewGuid(), "Property Test Order");
+                var order = OrderEntity.Create(Guid.NewGuid(), 1, 10.00m, "Property Test Customer");
                 order.ConfirmPayment();
                 return order;
             })
@@ -184,7 +184,7 @@ public sealed class OrderDomainEventInterceptorTests
         var orders = Enumerable.Range(0, n)
             .Select(_ =>
             {
-                var order = OrderEntity.Create(Guid.NewGuid(), "Property Test Order");
+                var order = OrderEntity.Create(Guid.NewGuid(), 1, 10.00m, "Property Test Customer");
                 order.ConfirmPayment();
                 return order;
             })

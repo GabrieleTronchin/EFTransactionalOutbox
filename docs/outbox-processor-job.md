@@ -53,7 +53,7 @@ var domainEvent = JsonConvert.DeserializeObject<IDomainEvent>(
 );
 ```
 
-The `TypeNameHandling.Auto` setting reads the embedded type metadata written by the [OrderDomainEventInterceptor](outbox-interceptor.md) (which uses `TypeNameHandling.All`) to reconstruct the correct concrete event type (e.g., `OrderConfirmed`).
+The `TypeNameHandling.Auto` setting reads the embedded type metadata written by the [OrderDomainEventInterceptor](outbox-interceptor.md) (which uses `TypeNameHandling.All`) to reconstruct the correct concrete event type (e.g., `OrderConfirmed`, `OrderCancelled`).
 
 **Publishing:**
 
@@ -61,7 +61,7 @@ The `TypeNameHandling.Auto` setting reads the embedded type metadata written by 
 await _publisher.Publish(domainEvent, context.CancellationToken);
 ```
 
-The deserialized event is published via MediatR's `IPublisher`, which dispatches it to all registered `INotificationHandler<T>` implementations. For example, `OrderConfirmedEventHandler` handles `OrderConfirmed` events by decrementing the product quantity.
+The deserialized event is published via MediatR's `IPublisher`, which dispatches it to all registered `INotificationHandler<T>` implementations. For example, `OrderConfirmedEventHandler` handles `OrderConfirmed` events by decrementing the product quantity. The job also handles `OrderCancelled` events raised when an order is cancelled.
 
 ## Error Handling
 
@@ -108,3 +108,5 @@ This Quartz.NET attribute ensures that only one instance of the job runs at a ti
 2. The [OrderDomainEventInterceptor](outbox-interceptor.md) persists events to the outbox table during `SaveChanges`
 3. **This job** polls the outbox table, deserializes events, and publishes them via MediatR
 4. MediatR dispatches events to registered handlers (e.g., `OrderConfirmedEventHandler`)
+
+> **Note:** The `OrderEntity` now uses an `OrderStatus` enum (`Pending`, `Confirmed`, `Cancelled`) instead of a `bool Confirmed` property. Both `ConfirmPayment()` and `CancelOrder()` raise domain events (`OrderConfirmed` and `OrderCancelled` respectively) that flow through this outbox pipeline. The [InboxMessageProcessorJob](inbox-processor-job.md) can also trigger this flow when processing incoming `PaymentConfirmed` messages.

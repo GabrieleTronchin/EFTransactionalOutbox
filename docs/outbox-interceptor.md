@@ -42,6 +42,8 @@ This is the single override that implements the interception logic. The method:
   - `Type` — the event class name (e.g., `"OrderConfirmed"`)
   - `Content` — JSON-serialized event using Newtonsoft.Json with `TypeNameHandling.All`
 
+The interceptor handles all domain events raised by `OrderEntity`, including `OrderConfirmed` (raised by `ConfirmPayment()`) and `OrderCancelled` (raised by `CancelOrder()`).
+
 ## Serialization
 
 Events are serialized using Newtonsoft.Json with `TypeNameHandling.All`:
@@ -66,7 +68,7 @@ Content = JsonConvert.SerializeObject(x, new JsonSerializerSettings
 
 ## Lifecycle in the Outbox Pattern
 
-1. Application code modifies an `OrderEntity` and calls `SaveChangesAsync`
+1. Application code modifies an `OrderEntity` (e.g., `ConfirmPayment()` or `CancelOrder()`) and calls `SaveChangesAsync`
 2. **This interceptor** collects events from the [DomainEventManager](domain-event-manager.md), serializes them, and adds `OutboxMessageEntity` records to the context
 3. EF Core persists both the entity changes and the outbox messages in a single transaction
 4. The [OutboxMessageProcessorJob](outbox-processor-job.md) later polls the outbox table and publishes the events

@@ -6,7 +6,7 @@
 
 `DomainEventManager` is an abstract base class in the Domain layer that provides domain event management capabilities to any entity that inherits from it. It acts as a local event buffer, allowing domain entities to raise events during business operations and have those events collected later for persistence and dispatch.
 
-In this project, `OrderEntity` inherits from `DomainEventManager`, which enables it to raise an `OrderConfirmed` event when a payment is confirmed.
+In this project, `OrderEntity` inherits from `DomainEventManager`, which enables it to raise domain events during order lifecycle transitions — `OrderConfirmed` when a payment is confirmed and `OrderCancelled` when an order is cancelled.
 
 **Source:** [`src/Sample.TransactionalOutbox.Domain/Primitives/DomainEventManager.cs`](../src/Sample.TransactionalOutbox.Domain/Primitives/DomainEventManager.cs)
 
@@ -24,7 +24,7 @@ This separation of concerns means the domain layer has no knowledge of how event
 public void RaiseEvent(IDomainEvent domainEvent)
 ```
 
-Adds a domain event to the internal event list. Called by the entity during a business operation. For example, `OrderEntity.ConfirmPayment()` calls `RaiseEvent(new OrderConfirmed(ProductId))` to signal that an order has been confirmed.
+Adds a domain event to the internal event list. Called by the entity during a business operation. For example, `OrderEntity.ConfirmPayment()` calls `RaiseEvent(new OrderConfirmed(Id, ProductId))` to signal that an order has been confirmed, and `OrderEntity.CancelOrder()` calls `RaiseEvent(new OrderCancelled(Id, ProductId))` to signal cancellation.
 
 Events are appended in the order they are raised, preserving the sequence of domain operations.
 

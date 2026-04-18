@@ -21,11 +21,13 @@ internal sealed class OrderConfirmedEventHandler : INotificationHandler<OrderCon
     public async Task Handle(OrderConfirmed orderConfirmed, CancellationToken cancellationToken)
     {
         _logger.LogInformation(
-            $"New order confimation received ProductId = {orderConfirmed.productId}"
+            "New order confirmation received OrderId = {OrderId}, ProductId = {ProductId}",
+            orderConfirmed.OrderId,
+            orderConfirmed.ProductId
         );
 
         var product = await _productRepository.GetAsync(
-            orderConfirmed.productId,
+            orderConfirmed.ProductId,
             cancellationToken
         );
 

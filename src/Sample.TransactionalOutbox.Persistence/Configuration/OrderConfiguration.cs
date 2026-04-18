@@ -9,5 +9,12 @@ internal class OrderConfiguration : IEntityTypeConfiguration<OrderEntity>
     public void Configure(EntityTypeBuilder<OrderEntity> builder)
     {
         builder.HasKey(t => t.Id);
+
+        builder.Property(t => t.OrderStatus)
+            .HasConversion<string>();
+
+        builder.Property(t => t.CustomerName).IsRequired();
+        builder.Property(t => t.ShippingAddress).IsRequired(false);
+        builder.Property(t => t.ConfirmedAt).IsRequired(false);
     }
 }

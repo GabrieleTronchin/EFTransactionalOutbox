@@ -16,7 +16,7 @@ public sealed class DomainEventManagerTests
     {
         // Arrange
         var manager = new TestableEventManager();
-        var domainEvent = new OrderConfirmed(Guid.NewGuid());
+        var domainEvent = new OrderConfirmed(Guid.NewGuid(), Guid.NewGuid());
 
         // Act
         manager.RaiseEvent(domainEvent);
@@ -31,9 +31,9 @@ public sealed class DomainEventManagerTests
     {
         // Arrange
         var manager = new TestableEventManager();
-        var event1 = new OrderConfirmed(Guid.NewGuid());
-        var event2 = new OrderConfirmed(Guid.NewGuid());
-        var event3 = new OrderConfirmed(Guid.NewGuid());
+        var event1 = new OrderConfirmed(Guid.NewGuid(), Guid.NewGuid());
+        var event2 = new OrderConfirmed(Guid.NewGuid(), Guid.NewGuid());
+        var event3 = new OrderConfirmed(Guid.NewGuid(), Guid.NewGuid());
 
         manager.RaiseEvent(event1);
         manager.RaiseEvent(event2);
@@ -52,8 +52,8 @@ public sealed class DomainEventManagerTests
     {
         // Arrange
         var manager = new TestableEventManager();
-        manager.RaiseEvent(new OrderConfirmed(Guid.NewGuid()));
-        manager.RaiseEvent(new OrderConfirmed(Guid.NewGuid()));
+        manager.RaiseEvent(new OrderConfirmed(Guid.NewGuid(), Guid.NewGuid()));
+        manager.RaiseEvent(new OrderConfirmed(Guid.NewGuid(), Guid.NewGuid()));
 
         // Act
         manager.ClearEvents();

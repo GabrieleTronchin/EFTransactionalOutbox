@@ -3,14 +3,17 @@
 # -------------------------------------------------------
 # Step 1: Retrieve all products
 # -------------------------------------------------------
-# Lists all products with their current available quantities.
+# Lists all marketplace products with their catalog details,
+# current available quantities, and active status.
 # Use this first to see the initial product inventory before
-# confirming any orders. After an order is confirmed, the
-# Transactional Outbox pattern processes the domain event
-# and decrements the product quantity asynchronously.
+# confirming or cancelling any orders. After an order is
+# confirmed, the Transactional Outbox pattern processes the
+# domain event and decrements the product quantity
+# asynchronously (may take up to 10 seconds).
 #
 # Expected response: 200 OK with a JSON array of products,
-# each containing an id, name, and quantity.
+# each containing id, name, price, sku, description,
+# quantity, isActive, and createdAt.
 
 GET {{host}}/Products
 Accept: application/json
@@ -18,16 +21,34 @@ Accept: application/json
 ###
 
 # -------------------------------------------------------
-# Step 2: Retrieve all orders
+# Step 2: Retrieve a single product by ID
 # -------------------------------------------------------
-# Lists all orders with their current confirmation status.
-# Use this to find an unconfirmed order (Confirmed = false)
-# whose ID you can use in the PurchaseOrder endpoint below.
-# After confirming an order, call this again to verify the
-# order status has changed to Confirmed = true.
+# Returns a single product by its unique identifier.
+# Replace the example ID below with an actual product ID
+# retrieved from GET /Products.
+#
+# Expected response: 200 OK with a single product JSON
+# object, or 404 if the product does not exist.
+
+GET {{host}}/Products/00000000-0000-0000-0000-000000000001
+Accept: application/json
+
+###
+
+# -------------------------------------------------------
+# Step 3: Retrieve all orders
+# -------------------------------------------------------
+# Lists all marketplace orders with their current status,
+# customer information, and associated product details.
+# Use this to find a Pending order whose ID you can use
+# in the PurchaseOrder or Cancel endpoints below.
+# After confirming or cancelling an order, call this again
+# to verify the order status has changed.
 #
 # Expected response: 200 OK with a JSON array of orders,
-# each containing an id, productId, description, and confirmed flag.
+# each containing id, productId, quantity, totalAmount,
+# orderStatus, customerName, shippingAddress, createdAt,
+# and confirmedAt.
 
 GET {{host}}/Orders
 Accept: application/json
@@ -35,9 +56,9 @@ Accept: application/json
 ###
 
 # -------------------------------------------------------
-# Step 3: Confirm an order (Transactional Outbox in action)
+# Step 4: Confirm an order (Transactional Outbox in action)
 # -------------------------------------------------------
-# Confirms an order by its ID, triggering the full
+# Confirms a pending order by its ID, triggering the full
 # Transactional Outbox pattern flow:
 #   1. OrderEntity raises an OrderConfirmed domain event
 #   2. The EF Core SaveChanges interceptor serializes the
@@ -48,12 +69,66 @@ Accept: application/json
 #      product quantity
 #
 # Replace the example ID below with an actual order ID
-# retrieved from GET /Orders.
+# retrieved from GET /Orders (must be in Pending status).
 #
 # Expected response: 200 OK (empty body).
-# Then call GET /Orders to verify Confirmed = true,
+# Returns 404 if the order does not exist.
+# Returns 409 Conflict if the order is not in Pending status.
+# Then call GET /Orders to verify OrderStatus = "Confirmed",
 # and GET /Products to see the decremented quantity
 # (may take up to 10 seconds for the background job).
 
-POST {{host}}/PurchaseOrder/e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1
+POST {{host}}/PurchaseOrder/00000000-0000-0000-0000-000000000001
 Accept: application/json
+
+###
+
+# -------------------------------------------------------
+# Step 5: Cancel an order
+# -------------------------------------------------------
+# Cancels a pending order by its ID. Raises an
+# OrderCancelled domain event that is persisted to the
+# outbox table within the same transaction.
+#
+# Replace the example ID below with an actual order ID
+# retrieved from GET /Orders (must be in Pending status).
+#
+# Expected response: 200 OK (empty body).
+# Returns 404 if the order does not exist.
+# Returns 409 Conflict if the order is not in Pending status.
+# Then call GET /Orders to verify OrderStatus = "Cancelled".
+
+POST {{host}}/Orders/00000000-0000-0000-0000-000000000001/Cancel
+Accept: application/json
+
+###
+
+# -------------------------------------------------------
+# Step 6: Receive an external message (Transactional Inbox)
+# -------------------------------------------------------
+# Accepts an external message payload and persists it as an
+# InboxMessageEntity for asynchronous processing by the
+# Inbox Processor background job. This demonstrates the
+# Transactional Inbox pattern — the complement to the Outbox.
+#
+# The example below sends a PaymentConfirmed message. The
+# Inbox Processor job will pick it up (within 10 seconds),
+# look up the order by OrderId, and call ConfirmPayment().
+#
+# Replace the OrderId in the Payload with an actual order ID
+# retrieved from GET /Orders (must be in Pending status).
+#
+# This endpoint is idempotent — sending the same message ID
+# again returns 200 without creating a duplicate.
+#
+# Expected response: 200 OK (empty body).
+
+POST {{host}}/Inbox/Receive
+Accept: application/json
+Content-Type: application/json
+
+{
+  "Id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "MessageType": "PaymentConfirmed",
+  "Payload": "{\"OrderId\": \"00000000-0000-0000-0000-000000000001\"}"
+}

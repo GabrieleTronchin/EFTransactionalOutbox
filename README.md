@@ -141,7 +141,7 @@ Swagger UI is available at `/swagger` when running in Development mode.
 | Package | Version | Notes |
 |---|---|---|
 | .NET | 10.0 | Target framework for all projects |
-| MediatR | 14.1.0 | In-process messaging and domain event dispatch |
+| MediatR | 12.5.0 | In-process messaging and domain event dispatch (last Apache-2.0 version) |
 | Quartz | 3.18.0 | Background job scheduling for outbox and inbox processing |
 | Quartz.Extensions.Hosting | 3.18.0 | Hosted service integration for Quartz.NET |
 | Newtonsoft.Json | 13.0.4 | Domain event serialization with `TypeNameHandling` |

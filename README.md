@@ -18,9 +18,9 @@ The Outbox pattern guarantees that domain events are persisted atomically with b
 
 | Project | Description |
 |---|---|
-| **Sample.TransactionalOutbox** | API layer with minimal endpoints, `OutboxMessageProcessorJob`, and `InboxMessageProcessorJob` |
-| **Sample.TransactionalOutbox.Domain** | Domain layer with `OrderEntity` (with `OrderStatus` lifecycle), `ProductEntity` (with catalog properties), `InboxMessageEntity`, `OutboxMessageEntity`, and `DomainEventManager` |
-| **Sample.TransactionalOutbox.Persistence** | Persistence layer with EF Core `DbContext`, repositories, outbox interceptor, and inbox/outbox configurations |
+| **Sample.TransactionalOutbox** | API layer with `IEndpoint` classes (auto-discovered), `OutboxMessageProcessorJob`, and `InboxMessageProcessorJob` |
+| **Sample.TransactionalOutbox.Domain** | Domain layer with `OrderEntity` (with `OrderStatus` lifecycle), `ProductEntity` (with catalog properties), `InboxMessageEntity`, `OutboxMessageEntity`, `DomainEventManager`, `MessageTypeRegistry`, and inbox message types/handlers |
+| **Sample.TransactionalOutbox.Persistence** | Persistence layer with EF Core `DbContext`, repositories (including `InboxMessageRepository`), outbox interceptor, and inbox/outbox configurations |
 | **Sample.TransactionalOutbox.Domain.Tests** | Unit and property-based tests for domain logic |
 | **Sample.TransactionalOutbox.Persistence.Tests** | Tests for persistence layer |
 | **Sample.TransactionalOutbox.Tests** | Integration and cross-cutting tests |
@@ -60,21 +60,30 @@ The Inbox pattern provides reliable, idempotent processing of external messages.
 ```mermaid
 sequenceDiagram
     participant External as External System
-    participant API
+    participant API as InboxEndpoint
+    participant Repo as IInboxMessageRepository
     participant InboxTable as InboxMessages Table
     participant InboxJob as InboxMessageProcessorJob
+    participant Registry as MessageTypeRegistry
+    participant MediatR as MediatR IPublisher
+    participant Handler as PaymentConfirmedHandler
     participant OrderEntity
     participant Interceptor as OrderDomainEventInterceptor
     participant OutboxTable as OutboxMessages Table
 
     External->>API: POST /Inbox/Receive (PaymentConfirmed)
-    API->>InboxTable: Insert InboxMessageEntity
+    API->>Repo: ReceiveAsync(id, messageType, payload)
+    Repo->>InboxTable: Insert InboxMessageEntity (idempotent)
     Note over InboxJob: Polls every 10 seconds
     InboxJob->>InboxTable: Query unprocessed messages
     InboxJob->>InboxJob: Check idempotency (ProcessedAt != null → skip)
-    InboxJob->>OrderEntity: ConfirmPayment()
+    InboxJob->>Registry: Resolve(messageType) → CLR type
+    InboxJob->>InboxJob: Deserialize payload → IInboxMessage
+    InboxJob->>MediatR: Publish(inboxMessage)
+    MediatR->>Handler: Handle(PaymentConfirmedInboxMessage)
+    Handler->>OrderEntity: ConfirmPayment()
     OrderEntity->>OrderEntity: RaiseEvent(OrderConfirmed)
-    InboxJob->>Interceptor: SaveChangesAsync()
+    Handler->>Interceptor: SaveChangesAsync()
     Interceptor->>OutboxTable: Insert OutboxMessageEntity (same transaction)
     InboxJob->>InboxTable: Set ProcessedAt
 ```
@@ -106,6 +115,7 @@ Use the `Sample.TransactionalOutbox.http` file or Swagger UI (`/swagger`) to exp
 | `GET` | `/Products` | Returns a list of all products with their catalog properties and quantities |
 | `GET` | `/Products/{id}` | Returns a single product by ID. Returns 404 if not found |
 | `GET` | `/Orders` | Returns a list of all orders with their status and details |
+| `POST` | `/Orders` | Creates a new order for a given product. Returns 404 if the product is not found |
 | `POST` | `/PurchaseOrder/{id}` | Confirms an order by ID, triggering the outbox pattern flow. Returns 404 if not found, 409 if not Pending |
 | `POST` | `/Orders/{id}/Cancel` | Cancels a pending order by ID. Returns 404 if not found, 409 if not Pending |
 | `POST` | `/Inbox/Receive` | Accepts an external message payload and persists it as an inbox message. Idempotent — returns 200 if the message ID already exists |
@@ -121,8 +131,10 @@ Swagger UI is available at `/swagger` when running in Development mode.
 | **DomainEventManager** | Abstract base class that manages a list of domain events via `RaiseEvent`, `GetEvents`, and `ClearEvents` | [docs/domain-event-manager.md](docs/domain-event-manager.md) |
 | **OrderDomainEventInterceptor** | EF Core `SaveChangesInterceptor` that serializes pending domain events into the `OutboxMessages` table within the same transaction | [docs/outbox-interceptor.md](docs/outbox-interceptor.md) |
 | **OutboxMessageProcessorJob** | Quartz.NET background job that polls unprocessed outbox messages, deserializes them, and publishes via MediatR | [docs/outbox-processor-job.md](docs/outbox-processor-job.md) |
-| **InboxMessageEntity** | Domain entity representing an incoming external message with idempotency tracking (`ProcessedAt`) and error capture | — |
-| **InboxMessageProcessorJob** | Quartz.NET background job that polls unprocessed inbox messages, checks idempotency, and executes the corresponding business logic (e.g., confirming orders) | [docs/inbox-processor-job.md](docs/inbox-processor-job.md) |
+| **InboxMessageProcessorJob** | Quartz.NET background job that polls unprocessed inbox messages, resolves types via `MessageTypeRegistry`, deserializes payloads, and publishes via MediatR to dedicated handlers | [docs/inbox-processor-job.md](docs/inbox-processor-job.md) |
+| **MessageTypeRegistry** | Singleton that maps `MessageType` strings to CLR types implementing `IInboxMessage`, enabling generic inbox dispatch without hardcoded routing | — |
+| **IEndpoint / ServiceExtension** | Interface and assembly-scanning mechanism that auto-discovers endpoint classes (`ProductsEndpoint`, `OrdersEndpoint`, `InboxEndpoint`) and registers them in the DI container | — |
+| **IInboxMessageRepository** | Repository interface (Domain) with implementation (Persistence) that handles idempotent inbox message receive and persistence | — |
 
 ## Package Versions
 

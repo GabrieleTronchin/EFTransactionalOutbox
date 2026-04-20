@@ -1,7 +1,9 @@
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Quartz;
-using Sample.TransactionalOutbox.Domain.Order;
+using Sample.TransactionalOutbox.Domain.Inbox;
+using Sample.TransactionalOutbox.Domain.Primitives;
 using Sample.TransactionalOutbox.Persistence;
 
 namespace Sample.TransactionalOutbox.Job;
@@ -11,18 +13,21 @@ public class InboxMessageProcessorJob : IJob
 {
     private const int DEFAULT_TAKE_MESSAGES = 10;
     private readonly ShopDbContext _context;
-    private readonly IOrderRepository _orderRepository;
+    private readonly IPublisher _publisher;
+    private readonly MessageTypeRegistry _registry;
     private readonly ILogger<InboxMessageProcessorJob> _logger;
 
     public InboxMessageProcessorJob(
         ILogger<InboxMessageProcessorJob> logger,
         ShopDbContext context,
-        IOrderRepository orderRepository
+        IPublisher publisher,
+        MessageTypeRegistry registry
     )
     {
         _logger = logger;
         _context = context;
-        _orderRepository = orderRepository;
+        _publisher = publisher;
+        _registry = registry;
     }
 
     public async Task Execute(IJobExecutionContext context)
@@ -44,15 +49,18 @@ public class InboxMessageProcessorJob : IJob
 
             try
             {
-                switch (message.MessageType)
+                var type = _registry.Resolve(message.MessageType);
+
+                if (type == null)
                 {
-                    case "PaymentConfirmed":
-                        await HandlePaymentConfirmed(message.Payload, context.CancellationToken);
-                        break;
-                    default:
-                        _logger.LogWarning($"Unknown inbox message type: {message.MessageType}. Message Id: {message.Id}");
-                        break;
+                    _logger.LogWarning($"Unknown inbox message type: {message.MessageType}. Message Id: {message.Id}");
+                    message.ProcessedAt = DateTime.UtcNow;
+                    continue;
                 }
+
+                var inboxMessage = (IInboxMessage)JsonConvert.DeserializeObject(message.Payload, type)!;
+
+                await _publisher.Publish(inboxMessage, context.CancellationToken);
 
                 message.ProcessedAt = DateTime.UtcNow;
                 message.Error = null;
@@ -66,22 +74,5 @@ public class InboxMessageProcessorJob : IJob
         }
 
         await _context.SaveChangesAsync(context.CancellationToken);
-    }
-
-    private async Task HandlePaymentConfirmed(string payload, CancellationToken cancellationToken)
-    {
-        var paymentConfirmed = JsonConvert.DeserializeObject<PaymentConfirmedPayload>(payload);
-
-        if (paymentConfirmed == null || paymentConfirmed.OrderId == Guid.Empty)
-            throw new InvalidOperationException("Invalid PaymentConfirmed payload: missing or empty OrderId.");
-
-        var order = await _orderRepository.GetAsync(paymentConfirmed.OrderId, cancellationToken);
-
-        order.ConfirmPayment();
-    }
-
-    private sealed class PaymentConfirmedPayload
-    {
-        public Guid OrderId { get; set; }
     }
 }

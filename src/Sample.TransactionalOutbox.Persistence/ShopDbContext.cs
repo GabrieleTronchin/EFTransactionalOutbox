@@ -13,6 +13,7 @@ namespace Sample.TransactionalOutbox.Persistence
         public DbSet<OrderEntity> Orders { get; set; }
         public DbSet<ProductEntity> Products { get; set; }
         public DbSet<OutboxMessageEntity> DomainEvents { get; set; }
+        public DbSet<InboxMessageEntity> InboxMessages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

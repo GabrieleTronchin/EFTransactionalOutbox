@@ -1,27 +1,49 @@
+using System.Text.Json.Serialization;
 using Quartz;
-using Sample.TransactionalOutbox.Domain;
-using Sample.TransactionalOutbox.Domain.Order;
-using Sample.TransactionalOutbox.Domain.Product;
+using Sample.TransactionalOutbox.Domain.Inbox;
+using Sample.TransactionalOutbox.Domain.Primitives;
+using Sample.TransactionalOutbox.Endpoints;
 using Sample.TransactionalOutbox.Job;
 using Sample.TransactionalOutbox.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
+
 
 builder.Services.AddPersistence();
 
 builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(OutboxMessageEntity).Assembly)
+    cfg.RegisterServicesFromAssemblies(
+        typeof(Program).Assembly,
+        typeof(IDomainEvent).Assembly)
 );
+
+var registry = new MessageTypeRegistry();
+registry.Register<PaymentConfirmedInboxMessage>("PaymentConfirmed");
+builder.Services.AddSingleton(registry);
+
+builder.Services.AddEndpoints(typeof(Program).Assembly);
 
 builder.Services.AddQuartz(cfg =>
 {
-    var jobKey = new JobKey(nameof(OutboxMessageProcessorJob));
+    var outboxJobKey = new JobKey(nameof(OutboxMessageProcessorJob));
 
-    cfg.AddJob<OutboxMessageProcessorJob>(jobKey)
+    cfg.AddJob<OutboxMessageProcessorJob>(outboxJobKey)
         .AddTrigger(t =>
-            t.ForJob(jobKey).WithSimpleSchedule(s => s.WithIntervalInSeconds(10).RepeatForever())
+            t.ForJob(outboxJobKey).WithSimpleSchedule(s => s.WithIntervalInSeconds(10).RepeatForever())
+        );
+
+    var inboxJobKey = new JobKey(nameof(InboxMessageProcessorJob));
+
+    cfg.AddJob<InboxMessageProcessorJob>(inboxJobKey)
+        .AddTrigger(t =>
+            t.ForJob(inboxJobKey).WithSimpleSchedule(s => s.WithIntervalInSeconds(10).RepeatForever())
         );
 });
 
@@ -31,42 +53,12 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
+    app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-
-app.MapGet(
-        "/Products",
-        async (IProductRepository productRepository) =>
-        {
-            return await productRepository.GetAsync(CancellationToken.None);
-        }
-    )
-    .WithName("GetProducts")
-    .WithOpenApi();
-
-app.MapGet(
-        "/Orders",
-        async (IOrderRepository orderRepository) =>
-        {
-            return await orderRepository.GetAsync(CancellationToken.None);
-        }
-    )
-    .WithName("GetOrder")
-    .WithOpenApi();
-
-app.MapPost(
-        "/PurchaseOrder/{id}",
-        async (IOrderRepository orderRepository, Guid id) =>
-        {
-            var order = await orderRepository.GetAsync(id, CancellationToken.None);
-            order.ConfirmPayment();
-            await orderRepository.SaveChangesAsync();
-        }
-    )
-    .WithName("Order")
-    .WithOpenApi();
+app.MapEndpoints();
 
 app.UseHttpsRedirection();
 

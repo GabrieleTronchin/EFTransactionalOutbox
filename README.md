@@ -1,236 +1,155 @@
-# Transactional Outbox Pattern With EF Core
+# Marketplace Orders Microservice — Transactional Outbox & Inbox Patterns
 
-In this project, I've implemented the Transactional Outbox Pattern using EF Core. 
-For testing purposes, we're utilizing an in-memory database.
+A sample .NET marketplace Orders microservice demonstrating both the **Transactional Outbox** and **Transactional Inbox** patterns using C#, Entity Framework Core, MediatR, and Quartz.NET.
 
-We have two main entities:
-1. Product
-2. Order
+The Outbox pattern guarantees that domain events are persisted atomically with business data changes and reliably dispatched to handlers. The Inbox pattern complements it by providing idempotent, reliable processing of incoming external messages.
 
-These entities are automatically initialized within the database.
+## Table of Contents
 
-Within the API, there are three crucial endpoints:
+- [Project Structure](#project-structure)
+- [Pattern Flows](#pattern-flows)
+- [Testing the Flow](#testing-the-flow)
+- [API Endpoints](#api-endpoints)
+- [Key Components](#key-components)
+- [Package Versions](#package-versions)
+- [Articles](#articles)
 
-![Swagger](assets/SwaggerHome.png)
+## Project Structure
 
-1. **Products**: This endpoint returns a list of products along with their respective quantities.
-2. **Orders**: Here, you can retrieve a list of created orders.
-3. **PurchaseOrder**: This is a POST endpoint designed to confirm a created order.
+| Project | Description |
+|---|---|
+| **Sample.TransactionalOutbox** | API layer with `IEndpoint` classes (auto-discovered), `OutboxMessageProcessorJob`, and `InboxMessageProcessorJob` |
+| **Sample.TransactionalOutbox.Domain** | Domain layer with `OrderEntity` (with `OrderStatus` lifecycle), `ProductEntity` (with catalog properties), `InboxMessageEntity`, `OutboxMessageEntity`, `DomainEventManager`, `MessageTypeRegistry`, and inbox message types/handlers |
+| **Sample.TransactionalOutbox.Persistence** | Persistence layer with EF Core `DbContext`, repositories (including `InboxMessageRepository`), outbox interceptor, and inbox/outbox configurations |
+| **Sample.TransactionalOutbox.Domain.Tests** | Unit and property-based tests for domain logic |
+| **Sample.TransactionalOutbox.Persistence.Tests** | Tests for persistence layer |
+| **Sample.TransactionalOutbox.Tests** | Integration and cross-cutting tests |
 
-To effectively test the project, follow these steps:
-1. **Retrieve a Product**: Note that the default order quantity is set to 10.
-    ![GetProduct](assets/GetProduct01.png)
-2. **Fetch Orders**: This step allows you to obtain an order ID.
-   ![GetOrder](assets/GetOrder01.png)
-3. **Purchase Order**: Utilize the PurchaseOrder endpoint with a valid order ID.
-   ![Purchase Order](assets/PurchaseOrder.png)
-4. **Check Product Quantity**: Finally, re-access the product to observe the decremented order quantity.
-    ![Swagger](assets/GetProduct02.png)
+## Pattern Flows
 
-# Transactional Outbox Pattern
+### Transactional Outbox — Events Going Out
 
-In a microservices architecture, various services are typically responsible for distinct aspects of business logic. 
-However, when an operation necessitates the involvement of multiple services, maintaining data consistency becomes a significant challenge. 
+The Outbox pattern ensures domain events raised during business operations are persisted atomically with the data change and later dispatched by a background job.
 
-For instance, consider an Order Management System where the process of placing an order entails not only updating inventory but also several other operations. 
-Failure at any of these stages can result in inconsistencies across the services.
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant OrderEntity
+    participant Interceptor as OrderDomainEventInterceptor
+    participant OutboxTable as OutboxMessages Table
+    participant OutboxJob as OutboxMessageProcessorJob
+    participant MediatR
+    participant Handler as OrderConfirmedEventHandler
 
-In this article, we will delve into the Transactional Outbox pattern within the context of Order Management and provide a simplified example. 
-
-To simplify the explanation, I have utilized SQL Server to persist our events, Quartz for event consumption, and Mediator as a message broker. 
-It's worth noting that different databases can be employed to persist events, and a service bus can be utilized to dispatch them, offering flexibility in implementation.
-
-More info about  Transactional Outbox Pattern [here](https://microservices.io/patterns/data/transactional-outbox.html)
-
-# Technical Description
-
-Let's take a peek under the hood of our system.
-
-In the persistence layer, we've set up a table dedicated to storing domain message events.
-
-I've introduced an abstract class named "DomainEventManager," responsible for managing a list of events.
-This class can be inherited from a domain class and use it to enqueued events. 
-
-When the "SaveChanges" method is invoked, an Entity Framework interceptor takes charge of persisting all domain events into our designated table.
-
-Additionally, a timer job is activated every few seconds. Its duty is to peruse the event table and dispatch the events stored within.
-
-## Domain Events Manager
-
-Our manager is tasked with handling events.
-Let's delve into the code:
-
-```C#
-public abstract class DomainEventManager
-{
-    private readonly IList<IDomainEvent> _events;
-
-    protected DomainEventManager()
-    {
-        _events = new List<IDomainEvent>();
-    }
-
-    public void RaiseEvent(IDomainEvent domainEvent)
-    {
-        _events.Add(domainEvent);
-    }
-
-    public IEnumerable<IDomainEvent> GetEvents()
-    {
-        return _events.ToList();
-    }
-
-    public void ClearEvents()
-    {
-        _events.Clear();
-    }
-}
+    Client->>API: POST /PurchaseOrder/{id}
+    API->>OrderEntity: ConfirmPayment()
+    OrderEntity->>OrderEntity: RaiseEvent(OrderConfirmed)
+    API->>Interceptor: SaveChangesAsync()
+    Interceptor->>OutboxTable: Insert OutboxMessageEntity (same transaction)
+    Note over OutboxJob: Polls every 10 seconds
+    OutboxJob->>OutboxTable: Query unprocessed messages
+    OutboxJob->>MediatR: Publish(OrderConfirmed)
+    MediatR->>Handler: Handle — decrement product quantity
 ```
 
-We can inherit DomainEventManager class into other domain classes. 
-This allows us to seamlessly integrate event handling within our domain logic.
+### Transactional Inbox — Messages Coming In
 
-```C#
-public class OrderEntity : DomainEventManager
-{
-    
-    // Code omitted for brevity
+The Inbox pattern provides reliable, idempotent processing of external messages. Messages are first persisted, then processed by a background job that checks for duplicates before executing business logic.
 
-    public void ConfirmPayment()
-    {
-        if (Confirmed) throw new InvalidOperationException("It's already confirmed.");
+```mermaid
+sequenceDiagram
+    participant External as External System
+    participant API as InboxEndpoint
+    participant Repo as IInboxMessageRepository
+    participant InboxTable as InboxMessages Table
+    participant InboxJob as InboxMessageProcessorJob
+    participant Registry as MessageTypeRegistry
+    participant MediatR as MediatR IPublisher
+    participant Handler as PaymentConfirmedHandler
+    participant OrderEntity
+    participant Interceptor as OrderDomainEventInterceptor
+    participant OutboxTable as OutboxMessages Table
 
-        RaiseEvent(new OrderConfirmed(ProductId));
-
-        Confirmed = true;
-    }
-
-    // Code omitted for brevity
-
-}
+    External->>API: POST /Inbox/Receive (PaymentConfirmed)
+    API->>Repo: ReceiveAsync(id, messageType, payload)
+    Repo->>InboxTable: Insert InboxMessageEntity (idempotent)
+    Note over InboxJob: Polls every 10 seconds
+    InboxJob->>InboxTable: Query unprocessed messages
+    InboxJob->>InboxJob: Check idempotency (ProcessedAt != null → skip)
+    InboxJob->>Registry: Resolve(messageType) → CLR type
+    InboxJob->>InboxJob: Deserialize payload → IInboxMessage
+    InboxJob->>MediatR: Publish(inboxMessage)
+    MediatR->>Handler: Handle(PaymentConfirmedInboxMessage)
+    Handler->>OrderEntity: ConfirmPayment()
+    OrderEntity->>OrderEntity: RaiseEvent(OrderConfirmed)
+    Handler->>Interceptor: SaveChangesAsync()
+    Interceptor->>OutboxTable: Insert OutboxMessageEntity (same transaction)
+    InboxJob->>InboxTable: Set ProcessedAt
 ```
 
+### Conceptual Overview
 
-## Entity Framework Save DomainEvents
-
-To automatically persist events, a custom SaveChange method is necessary.
-For this purpose, we've implemented the "SaveChangesInterceptor" class. 
- 
-Here more information about EntityFramework [Interceptors](https://learn.microsoft.com/en-us/ef/core/logging-events-diagnostics/interceptors)
-
- Here's a snippet of the interceptor code:
-
-```C#
-public sealed class OrderDomainEventInterceptor
-: SaveChangesInterceptor
-{
-    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
-    {
-        var dbContext = eventData.Context;
-
-        if (dbContext is null)
-            return base.SavingChangesAsync(eventData, result, cancellationToken);
-
-        var domainEvents = dbContext.ChangeTracker.Entries<OrderEntity>()
-             .Select(x => x.Entity)
-             .SelectMany(x =>
-             {
-                 var @event = x.GetEvents();
-
-                 x.ClearEvents();
-
-                 return @event;
-
-             })
-             .Select(x => new OutboxMessageEntity()
-             {
-                 Id = Guid.NewGuid(),
-                 CreationTime = DateTime.UtcNow,
-                 Type = x.GetType().Name,
-                 Content = JsonConvert.SerializeObject(x, new JsonSerializerSettings
-                 {
-                     TypeNameHandling = TypeNameHandling.All
-                 })
-             })
-             .ToList();
-
-        dbContext.Set<OutboxMessageEntity>().AddRange(domainEvents);
-        return base.SavingChangesAsync(eventData, result, cancellationToken);
-    }
-}
+```mermaid
+flowchart LR
+    A[Business Operation] --> B[Save to DB +\nWrite to Outbox]
+    B -->|Same Transaction| C[Outbox Table]
+    C --> D[OutboxMessageProcessorJob\nPolls & Publishes]
 ```
 
-
-## Outbox Processor Job
-
-The outbox processor job is a crucial component that ensures timely dispatch of events stored in the DomainEvents table. It operates using Quartz .NET. For further details, refer to this [link](https://www.quartz-scheduler.net/)
-
-In our implementation, we leverage the MediatR NuGet package for event management. However, feel free to integrate your preferred service bus client.
-
-Here's an overview of the outbox message pattern:
-```C#
-public class OutboxMessageProcessorJob : IJob
-{
-    private const int DEFAULT_TAKE_DOMAINS = 10;
-    private readonly ShopDbContext _context;
-    private readonly IPublisher _publisher;
-    private readonly ILogger<OutboxMessageProcessorJob> _logger;
-
-    public OutboxMessageProcessorJob(ILogger<OutboxMessageProcessorJob> logger,
-                                     ShopDbContext context,
-                                     IPublisher publisher)
-    {
-        _context = context;
-        _publisher = publisher;
-        _logger = logger;
-    }
-
-    public async Task Execute(IJobExecutionContext context)
-    {
-        var messages = await _context.DomainEvents
-                 .Where(de => de.CompleteTime == null)
-                 .Take(DEFAULT_TAKE_DOMAINS).ToListAsync(context.CancellationToken);
-
-
-        if (!messages.Any()) return;
-
-        _logger.LogDebug($"Some new messages event are found. Event number: {messages.Count}");
-
-        foreach (var message in messages)
-        {
-            try
-            {
-                var domainEvent = JsonConvert.DeserializeObject<IDomainEvent>(message.Content, new JsonSerializerSettings
-                {
-                    TypeNameHandling = TypeNameHandling.Auto
-                });
-
-                if (domainEvent == null)
-                {
-                    _logger.LogError($"An error occurred during deserialization. Domain Event Id:{message.Id}");
-                    continue;
-                }
-
-                await _publisher.Publish(domainEvent, context.CancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"An error occurred processing domain event messages.");
-                message.Exception = ex.Message;
-            }
-            finally
-            {
-                message.CompleteTime = DateTime.UtcNow;
-            }
-        }
-
-        var sentMessages = messages.Where(de => de.Exception == null);
-
-        _context.DomainEvents.RemoveRange(sentMessages);
-
-        await _context.SaveChangesAsync(context.CancellationToken);
-    }
-}
+```mermaid
+flowchart LR
+    E[External Message] --> F[POST /Inbox/Receive\nPersist to Inbox]
+    F --> G[Inbox Table]
+    G --> H[InboxMessageProcessorJob\nPolls & Processes]
 ```
 
-This comprehensive setup guarantees efficient handling and processing of domain events within our application.
+## Testing the Flow
+
+Use the `Sample.TransactionalOutbox.http` file or Swagger UI (`/swagger`) to explore the API endpoints and observe both the outbox and inbox patterns in action.
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/Products` | Returns a list of all products with their catalog properties and quantities |
+| `GET` | `/Products/{id}` | Returns a single product by ID. Returns 404 if not found |
+| `GET` | `/Orders` | Returns a list of all orders with their status and details |
+| `POST` | `/Orders` | Creates a new order for a given product. Returns 404 if the product is not found |
+| `POST` | `/PurchaseOrder/{id}` | Confirms an order by ID, triggering the outbox pattern flow. Returns 404 if not found, 409 if not Pending |
+| `POST` | `/Orders/{id}/Cancel` | Cancels a pending order by ID. Returns 404 if not found, 409 if not Pending |
+| `POST` | `/Inbox/Receive` | Accepts an external message payload and persists it as an inbox message. Idempotent — returns 200 if the message ID already exists |
+
+### Swagger UI
+
+Swagger UI is available at `/swagger` when running in Development mode.
+
+## Key Components
+
+| Component | Description | Details |
+|---|---|---|
+| **DomainEventManager** | Abstract base class that manages a list of domain events via `RaiseEvent`, `GetEvents`, and `ClearEvents` | [docs/domain-event-manager.md](docs/domain-event-manager.md) |
+| **OrderDomainEventInterceptor** | EF Core `SaveChangesInterceptor` that serializes pending domain events into the `OutboxMessages` table within the same transaction | [docs/outbox-interceptor.md](docs/outbox-interceptor.md) |
+| **OutboxMessageProcessorJob** | Quartz.NET background job that polls unprocessed outbox messages, deserializes them, and publishes via MediatR | [docs/outbox-processor-job.md](docs/outbox-processor-job.md) |
+| **InboxMessageProcessorJob** | Quartz.NET background job that polls unprocessed inbox messages, resolves types via `MessageTypeRegistry`, deserializes payloads, and publishes via MediatR to dedicated handlers | [docs/inbox-processor-job.md](docs/inbox-processor-job.md) |
+| **MessageTypeRegistry** | Singleton that maps `MessageType` strings to CLR types implementing `IInboxMessage`, enabling generic inbox dispatch without hardcoded routing | — |
+| **IEndpoint / ServiceExtension** | Interface and assembly-scanning mechanism that auto-discovers endpoint classes (`ProductsEndpoint`, `OrdersEndpoint`, `InboxEndpoint`) and registers them in the DI container | — |
+| **IInboxMessageRepository** | Repository interface (Domain) with implementation (Persistence) that handles idempotent inbox message receive and persistence | — |
+
+## Package Versions
+
+| Package | Version | Notes |
+|---|---|---|
+| .NET | 10.0 | Target framework for all projects |
+| MediatR | 12.5.0 | In-process messaging and domain event dispatch (last Apache-2.0 version) |
+| Quartz | 3.18.0 | Background job scheduling for outbox and inbox processing |
+| Quartz.Extensions.Hosting | 3.18.0 | Hosted service integration for Quartz.NET |
+| Newtonsoft.Json | 13.0.4 | Domain event serialization with `TypeNameHandling` |
+| Microsoft.EntityFrameworkCore.InMemory | 10.0.5 | In-memory database provider for development and testing |
+| Microsoft.AspNetCore.OpenApi | 10.0.5 | OpenAPI document generation |
+| Microsoft.Extensions.Logging.Abstractions | 10.0.6 | Logging abstractions for the domain layer |
+| Swashbuckle.AspNetCore | 10.1.7 | Swagger UI and OpenAPI documentation |
+
+## Articles
+
+- [.NET 8 — Transactional Outbox Pattern With EF Core](https://medium.com/@gabriele.tronchin) by Gabriele Tronchin

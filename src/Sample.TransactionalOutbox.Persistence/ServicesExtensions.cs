@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Sample.TransactionalOutbox.Domain.Inbox;
 using Sample.TransactionalOutbox.Domain.Order;
 using Sample.TransactionalOutbox.Domain.Product;
 using Sample.TransactionalOutbox.Persistence.Interceptors;
@@ -14,6 +15,7 @@ namespace Sample.TransactionalOutbox.Persistence
         {
             services.AddTransient<IProductRepository, ProductRepository>();
             services.AddTransient<IOrderRepository, OrderRepository>();
+            services.AddTransient<IInboxMessageRepository, InboxMessageRepository>();
             services.AddSingleton<OrderDomainEventInterceptor>();
 
             var tcInterceptor = services
